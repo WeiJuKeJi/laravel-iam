@@ -16,7 +16,7 @@ Laravel Identity and Access Management (IAM) package - 一个完整的用户、�
 ## 依赖要求
 
 - PHP >= 8.2
-- Laravel >= 11.0
+- Laravel >= 11.0 (支持 Laravel 12)
 - MySQL / PostgreSQL
 
 ## 安装
