@@ -164,6 +164,18 @@ php artisan iam:sync-permissions
 php artisan iam:menus:export [path]
 ```
 
+#### 卸载扩展包
+
+安全卸载 Laravel IAM（详见 [卸载](#卸载) 章节）：
+
+```bash
+php artisan iam:uninstall [--force] [--keep-tables]
+```
+
+选项说明：
+- `--force`：跳过确认提示直接执行
+- `--keep-tables`：不显示数据库表清理提示
+
 ### 在代码中使用
 
 #### 检查权限
@@ -267,6 +279,54 @@ $menuService->flushCache();
 - **权限中间件**：所有管理接口都需要相应权限
 - **软删除**：用户数据支持软删除，防止误删
 - **密码加密**：使用 Laravel 原生 Hash 加密
+
+## 卸载
+
+由于 Laravel 的包自动发现机制，直接运行 `composer remove` 可能会因为缓存的 Service Provider 引用导致错误。请按以下步骤安全卸载：
+
+### 1. 运行卸载命令
+
+```bash
+php artisan iam:uninstall
+```
+
+此命令会：
+- 清理应用缓存（config、route、view）
+- 清理 bootstrap 缓存（packages.php、services.php）
+- 清理 IAM 菜单缓存
+- 显示需要手动处理的数据库表
+
+### 2. 移除 Composer 包
+
+```bash
+composer remove weijukeji/laravel-iam --no-scripts
+```
+
+> **重要**：必须添加 `--no-scripts` 参数，否则 Laravel 的 `pre-package-uninstall` 钩子会因为找不到已删除的类而报错。
+
+### 3. 重建包发现缓存
+
+```bash
+php artisan package:discover --ansi
+```
+
+### 4. （可选）清理数据库
+
+如果需要删除 IAM 相关的数据库表，可以手动运行：
+
+```bash
+php artisan migrate:rollback --path=vendor/weijukeji/laravel-iam/database/migrations
+```
+
+或者在运行卸载命令前保存迁移文件，然后手动执行回滚。
+
+### 快速卸载（一行命令）
+
+如果确定要卸载且不需要保留数据：
+
+```bash
+php artisan iam:uninstall --force && composer remove weijukeji/laravel-iam --no-scripts && php artisan package:discover --ansi
+```
 
 ## 测试
 

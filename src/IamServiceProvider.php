@@ -46,6 +46,7 @@ class IamServiceProvider extends ServiceProvider
             $this->commands([
                 Console\Commands\ExportMenusCommand::class,
                 Console\Commands\SyncPermissionsCommand::class,
+                Console\Commands\UninstallCommand::class,
             ]);
         }
     }
