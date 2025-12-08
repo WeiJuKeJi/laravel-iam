@@ -2,7 +2,6 @@
 
 namespace WeiJuKeJi\LaravelIam\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use WeiJuKeJi\LaravelIam\Http\Requests\Permission\PermissionStoreRequest;
@@ -12,13 +11,18 @@ use WeiJuKeJi\LaravelIam\Models\Permission;
 
 class PermissionController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:iam.permissions.view')->only(['index', 'show']);
+        $this->middleware('permission:iam.permissions.manage')->only(['store', 'update', 'destroy']);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $params = $request->only(['keywords', 'guard_name', 'per_page', 'page']);
+        $perPage = $this->resolvePerPage($params, 50);
 
         $query = Permission::query()->filter($params);
-
-        $perPage = $this->resolvePerPage($params, 50);
 
         $permissions = $query->orderBy('id')->paginate($perPage);
 

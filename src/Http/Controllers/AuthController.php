@@ -2,7 +2,6 @@
 
 namespace WeiJuKeJi\LaravelIam\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use WeiJuKeJi\LaravelIam\Http\Requests\Auth\LoginRequest;

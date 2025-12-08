@@ -1,29 +1,54 @@
 <?php
 
 return [
+    /*
+    |--------------------------------------------------------------------------
+    | 认证守卫
+    |--------------------------------------------------------------------------
+    |
+    | 指定用于 IAM 认证的守卫名称，默认使用 Sanctum。
+    |
+    */
     'guard' => 'sanctum',
 
+    /*
+    |--------------------------------------------------------------------------
+    | 路由前缀
+    |--------------------------------------------------------------------------
+    |
+    | 定义需要自动同步权限的路由前缀。
+    | 权限同步命令会扫描这些前缀下的路由并生成对应权限。
+    |
+    */
     'route_prefixes' => [
         'iam',
-        'mdm',
-        'ordersys',
-        'qmp',
-        'finance',
-        'datahub',
-        'yjf',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | 忽略的路由
+    |--------------------------------------------------------------------------
+    |
+    | 定义不需要权限验证的路由名称。
+    | 这些路由不会生成对应的权限记录。
+    |
+    */
     'ignore_routes' => [
         'iam.auth.login',
         'iam.auth.logout',
         'iam.auth.me',
         'iam.routes.index',
-        'api.iam.auth.login',
-        'api.iam.auth.logout',
-        'api.iam.auth.me',
-        'api.iam.routes.index',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | 动作映射
+    |--------------------------------------------------------------------------
+    |
+    | 将路由动作（方法名）映射到权限动作。
+    | 例如：index 和 show 映射到 view，store/update/destroy 映射到 manage。
+    |
+    */
     'action_map' => [
         'index' => 'view',
         'show' => 'view',
@@ -32,16 +57,16 @@ return [
         'destroy' => 'manage',
         'create' => 'manage',
         'edit' => 'manage',
-        // MDM 自定义动作
-        'by-nsrsbh' => 'view',
-        'children' => 'view',
-        'by-company' => 'view',
-        'valid-config' => 'view',
-        'set-as-default' => 'manage',
-        'leave' => 'manage',
-        'default-operator' => 'view',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | 动作标签
+    |--------------------------------------------------------------------------
+    |
+    | 权限动作的显示名称（用于 UI 展示）。
+    |
+    */
     'action_labels' => [
         'view' => '查看',
         'manage' => '管理',
@@ -50,33 +75,32 @@ return [
         'export' => '导出',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | 分组标签
+    |--------------------------------------------------------------------------
+    |
+    | 权限分组的显示名称（用于 UI 展示）。
+    | 格式：'路由前缀.资源名' => '显示名称'
+    |
+    */
     'group_labels' => [
-        'iam.users' => 'iam.用户',
-        'iam.roles' => 'iam.角色',
-        'iam.permissions' => 'iam.权限',
-        'iam.menus' => 'iam.菜单',
-        'iam.routes' => 'iam.路由',
-        'mdm.companies' => 'mdm.企业',
-        'mdm.company-tax-configs' => 'mdm.税务配置',
-        'mdm.company-operators' => 'mdm.开票员',
-        'mdm.projects' => 'mdm.项目',
-        'mdm.payment-channels' => 'mdm.支付渠道',
-        'ordersys.tenants' => 'ordersys.租户',
-        'qmp.orders' => 'qmp.订单',
-        'qmp.order-items' => 'qmp.订单明细',
-        'qmp.order-tickets' => 'qmp.票券',
-        'qmp.payments' => 'qmp.支付',
-        'qmp.pay-transactions' => 'qmp.支付流水',
-        'qmp.refunds' => 'qmp.退款',
-        'finance.finances' => 'finance.财务',
-        'finance.bill-downloads' => 'finance.账单下载',
-        'datahub.datahubs' => 'datahub.数据中台',
-        'yjf.yjfs' => 'yjf.账单',
-        'projects' => 'common.项目',
+        'iam.users' => 'IAM - 用户管理',
+        'iam.roles' => 'IAM - 角色管理',
+        'iam.permissions' => 'IAM - 权限管理',
+        'iam.menus' => 'IAM - 菜单管理',
+        'iam.routes' => 'IAM - 路由管理',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | 同步角色
+    |--------------------------------------------------------------------------
+    |
+    | 执行权限同步命令时，自动将新权限分配给这些角色。
+    |
+    */
     'sync_roles' => [
         'super-admin',
-        'Admin',
     ],
 ];

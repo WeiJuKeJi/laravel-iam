@@ -2,7 +2,6 @@
 
 namespace WeiJuKeJi\LaravelIam\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -13,9 +12,16 @@ use WeiJuKeJi\LaravelIam\Models\User;
 
 class UserController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:iam.users.view')->only(['index', 'show']);
+        $this->middleware('permission:iam.users.manage')->only(['store', 'update', 'destroy']);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $params = $request->only(['status', 'keywords', 'email', 'username', 'role', 'per_page', 'page']);
+        $perPage = $this->resolvePerPage($params);
 
         $query = User::query()->filter($params);
 
@@ -26,8 +32,6 @@ class UserController extends Controller
         if ($request->boolean('with_permissions')) {
             $query->with('permissions');
         }
-
-        $perPage = $this->resolvePerPage($params);
 
         $users = $query->orderByDesc('created_at')->paginate($perPage);
 

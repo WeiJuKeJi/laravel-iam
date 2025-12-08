@@ -12,7 +12,10 @@ Route::middleware(['api'])
     ->prefix('v1/iam')
     ->name('iam.')
     ->group(function () {
-        Route::post('auth/login', [AuthController::class, 'login'])->name('auth.login');
+        // 登录接口添加速率限制：每分钟最多 5 次
+        Route::post('auth/login', [AuthController::class, 'login'])
+            ->middleware('throttle:5,1')
+            ->name('auth.login');
 
         Route::middleware(['auth:sanctum'])->group(function () {
             Route::post('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');

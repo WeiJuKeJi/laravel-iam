@@ -44,8 +44,14 @@ return new class extends Migration
             }
         });
 
-        // 第二步：为现有用户填充 username（使用 email 前缀）
-        DB::statement("UPDATE users SET username = SPLIT_PART(email, '@', 1) WHERE username IS NULL");
+        // 第二步：为现有用户填充 username（使用 email 前缀，兼容 MySQL 和 PostgreSQL）
+        $driver = DB::getDriverName();
+        if ($driver === 'pgsql') {
+            DB::statement("UPDATE users SET username = SPLIT_PART(email, '@', 1) WHERE username IS NULL");
+        } else {
+            // MySQL / MariaDB / SQLite
+            DB::statement("UPDATE users SET username = SUBSTRING_INDEX(email, '@', 1) WHERE username IS NULL");
+        }
 
         // 第三步：处理重复的 username（添加数字后缀）
         $duplicates = DB::select("

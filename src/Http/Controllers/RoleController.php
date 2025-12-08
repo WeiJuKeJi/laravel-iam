@@ -2,7 +2,6 @@
 
 namespace WeiJuKeJi\LaravelIam\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -13,17 +12,22 @@ use WeiJuKeJi\LaravelIam\Models\Role;
 
 class RoleController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('permission:iam.roles.view')->only(['index', 'show']);
+        $this->middleware('permission:iam.roles.manage')->only(['store', 'update', 'destroy']);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $params = $request->only(['keywords', 'guard_name', 'per_page', 'page']);
+        $perPage = $this->resolvePerPage($params);
 
         $query = Role::query()->filter($params);
 
         if ($request->boolean('with_permissions')) {
             $query->with('permissions');
         }
-
-        $perPage = $this->resolvePerPage($params);
 
         $roles = $query->orderBy('id')->paginate($perPage);
 

@@ -2,7 +2,6 @@
 
 namespace WeiJuKeJi\LaravelIam\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,11 +10,10 @@ use WeiJuKeJi\LaravelIam\Http\Requests\Menu\MenuStoreRequest;
 use WeiJuKeJi\LaravelIam\Http\Requests\Menu\MenuUpdateRequest;
 use WeiJuKeJi\LaravelIam\Http\Resources\MenuResource;
 use WeiJuKeJi\LaravelIam\Models\Menu;
-use WeiJuKeJi\LaravelIam\Services\MenuService;
 
 class MenuAdminController extends Controller
 {
-    public function __construct(private readonly DatabaseManager $db, private readonly MenuService $menuService)
+    public function __construct(private readonly DatabaseManager $db)
     {
         $this->middleware('permission:iam.menus.view')->only(['index', 'show', 'tree']);
         $this->middleware('permission:iam.menus.manage')->only(['store', 'update', 'destroy']);
@@ -25,6 +23,7 @@ class MenuAdminController extends Controller
     {
         $params = $request->only(['parent_id', 'name', 'path', 'is_enabled', 'per_page', 'page']);
         $perPage = $this->resolvePerPage($params);
+
         $records = Menu::filter($params)
             ->with(['roles:id,name', 'permissions:id,name'])
             ->orderBy('sort_order')
@@ -59,6 +58,7 @@ class MenuAdminController extends Controller
         $roles = Arr::pull($data, 'role_ids', []);
         $permissions = Arr::pull($data, 'permission_ids', []);
 
+        // 缓存清除由 Menu 模型的 saved 事件自动处理
         $menu = $this->db->transaction(function () use ($data, $roles, $permissions) {
             $menu = Menu::create($data);
 
@@ -72,8 +72,6 @@ class MenuAdminController extends Controller
 
             return $menu->fresh(['roles:id,name', 'permissions:id,name', 'children']);
         });
-
-        $this->menuService->flushCache();
 
         $payload = MenuResource::make($menu)->toArray($request);
 
@@ -94,6 +92,7 @@ class MenuAdminController extends Controller
         $roles = Arr::pull($data, 'role_ids', []);
         $permissions = Arr::pull($data, 'permission_ids', []);
 
+        // 缓存清除由 Menu 模型的 saved 事件自动处理
         $menu = $this->db->transaction(function () use ($menu, $data, $roles, $permissions) {
             $menu->fill($data);
             $menu->save();
@@ -103,8 +102,6 @@ class MenuAdminController extends Controller
 
             return $menu->fresh(['roles:id,name', 'permissions:id,name', 'children']);
         });
-
-        $this->menuService->flushCache();
 
         $payload = MenuResource::make($menu)->toArray($request);
 
@@ -117,9 +114,8 @@ class MenuAdminController extends Controller
             return $this->error('请先删除子菜单', 422);
         }
 
+        // 缓存清除由 Menu 模型的 deleted 事件自动处理
         $menu->delete();
-
-        $this->menuService->flushCache();
 
         return $this->success(null, '菜单已删除');
     }

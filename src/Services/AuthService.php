@@ -17,8 +17,10 @@ class AuthService
     public function attemptLogin(string $account, string $password, string $ip): array
     {
         $user = User::query()
-            ->where('email', $account)
-            ->orWhere('username', $account)
+            ->where(function ($query) use ($account) {
+                $query->where('email', $account)
+                    ->orWhere('username', $account);
+            })
             ->first();
 
         if (! $user || ! Hash::check($password, $user->password)) {

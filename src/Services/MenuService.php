@@ -10,6 +10,16 @@ use WeiJuKeJi\LaravelIam\Models\User;
 
 class MenuService
 {
+    /**
+     * 缓存键前缀
+     */
+    protected const CACHE_PREFIX = 'iam_menu_';
+
+    /**
+     * 缓存键列表的键名
+     */
+    protected const CACHE_KEYS_LIST = 'iam_menu_cache_keys';
+
     protected CacheFactory $cache;
 
     public function __construct(CacheFactory $cache)
@@ -51,16 +61,23 @@ class MenuService
     }
 
     /**
-     * 清除缓存，供外部在菜单更新时调用。
+     * 清除菜单缓存，供外部在菜单更新时调用。
+     * 使用安全的缓存清除策略，避免清空整个应用缓存。
      */
     public function flushCache(): void
     {
         $store = $this->cache->store();
 
         if ($store->getStore() instanceof TaggableStore) {
+            // 支持标签的缓存驱动，直接按标签清除
             $store->tags(['menus'])->flush();
         } else {
-            $store->flush();
+            // 不支持标签的缓存驱动，逐个删除已记录的缓存键
+            $cacheKeys = $store->get(self::CACHE_KEYS_LIST, []);
+            foreach ($cacheKeys as $key) {
+                $store->forget($key);
+            }
+            $store->forget(self::CACHE_KEYS_LIST);
         }
     }
 
@@ -69,7 +86,7 @@ class MenuService
         $roleHash = md5(json_encode($roles));
         $permissionHash = md5(json_encode($permissions));
 
-        return "tree:{$roleHash}:{$permissionHash}";
+        return self::CACHE_PREFIX . "tree:{$roleHash}:{$permissionHash}";
     }
 
     protected function forgetCacheKey(string $cacheKey): void
@@ -107,7 +124,24 @@ class MenuService
             return $store->tags(['menus'])->remember($cacheKey, now()->addMinutes($ttlMinutes), $callback);
         }
 
+        // 记录缓存键以便后续清除
+        $this->trackCacheKey($cacheKey);
+
         return $store->remember($cacheKey, now()->addMinutes($ttlMinutes), $callback);
+    }
+
+    /**
+     * 记录缓存键，用于不支持标签的缓存驱动。
+     */
+    protected function trackCacheKey(string $cacheKey): void
+    {
+        $store = $this->cache->store();
+        $cacheKeys = $store->get(self::CACHE_KEYS_LIST, []);
+
+        if (! in_array($cacheKey, $cacheKeys)) {
+            $cacheKeys[] = $cacheKey;
+            $store->put(self::CACHE_KEYS_LIST, $cacheKeys, now()->addDays(7));
+        }
     }
 
     protected function generateVersion(Collection $menus): string
