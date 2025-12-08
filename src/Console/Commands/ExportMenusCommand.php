@@ -4,18 +4,18 @@ namespace WeiJuKeJi\LaravelIam\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
-use WeiJuKeJi\LaravelIam\Models\Menu;
 use Throwable;
+use WeiJuKeJi\LaravelIam\Models\Menu;
 
 class ExportMenusCommand extends Command
 {
-    protected $signature = 'iam:menus:export {path? : 输出 JSON 文件路径，默认写入模块种子文件}';
+    protected $signature = 'iam:menus:export {path? : 输出 JSON 文件路径，默认 database/seeders/menu.routes.json}';
 
-    protected $description = '将 menus 表中的菜单树导出为前端路由 JSON 文件';
+    protected $description = '将 menus 表中的菜单树导出为 JSON 文件，供 MenuSeeder 使用';
 
     public function handle(): int
     {
-        $outputPath = $this->argument('path') ?? module_path('Iam', 'database/seeders/menu.routes.json');
+        $outputPath = $this->argument('path') ?? database_path('seeders/menu.routes.json');
 
         $menus = Menu::query()->get();
 
@@ -48,6 +48,8 @@ class ExportMenusCommand extends Command
 
         $this->info('菜单路由 JSON 导出完成。');
         $this->line('输出路径：'.$outputPath);
+        $this->newLine();
+        $this->line('提示：下次运行 db:seed 时，MenuSeeder 会自动读取此文件。');
 
         return self::SUCCESS;
     }
@@ -55,15 +57,22 @@ class ExportMenusCommand extends Command
     protected function transformMenu(Menu $menu): array
     {
         $data = [
-            'path' => $menu->path,
             'name' => $menu->name,
-            'component' => $menu->component,
-            'redirect' => $menu->redirect,
-            'sort_order' => $menu->sort_order,
-            'is_enabled' => (bool) $menu->is_enabled,
+            'path' => $menu->path,
         ];
 
-        if (! is_null($menu->meta)) {
+        if ($menu->component) {
+            $data['component'] = $menu->component;
+        }
+
+        if ($menu->redirect) {
+            $data['redirect'] = $menu->redirect;
+        }
+
+        $data['sort_order'] = $menu->sort_order;
+        $data['is_enabled'] = (bool) $menu->is_enabled;
+
+        if (! empty($menu->meta)) {
             $data['meta'] = $menu->meta;
         }
 
@@ -71,9 +80,11 @@ class ExportMenusCommand extends Command
             $data['guard'] = $menu->guard;
         }
 
-        $children = $menu->children->map(fn (Menu $child) => $this->transformMenu($child))->all();
-
-        $data['children'] = $children;
+        if ($menu->children->isNotEmpty()) {
+            $data['children'] = $menu->children
+                ->map(fn (Menu $child) => $this->transformMenu($child))
+                ->all();
+        }
 
         return $data;
     }
