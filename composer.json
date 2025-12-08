@@ -1,0 +1,44 @@
+{
+    "name": "weijukeji/laravel-iam",
+    "description": "Laravel IAM (Identity and Access Management) package for managing users, roles, permissions and menus",
+    "keywords": ["laravel", "iam", "rbac", "permissions", "roles", "menu", "auth"],
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "WeiJuKeJi",
+            "email": "dev@weijukeji.com"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "illuminate/support": "^11.0|^12.0",
+        "spatie/laravel-permission": "^6.0",
+        "kalnoy/nestedset": "^6.0",
+        "tucker-eric/eloquentfilter": "^3.5"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0",
+        "phpunit/phpunit": "^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "WeiJuKeJi\\LaravelIam\\": "src/",
+            "WeiJuKeJi\\LaravelIam\\Database\\Seeders\\": "database/seeders/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "WeiJuKeJi\\LaravelIam\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "WeiJuKeJi\\LaravelIam\\IamServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

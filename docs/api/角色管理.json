@@ -1,0 +1,206 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "角色管理 API",
+    "description": "角色管理相关接口，包括角色的创建、查询、更新和删除功能",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/iam/roles": {
+      "get": {
+        "tags": ["Iam/Role"],
+        "summary": "获取角色列表",
+        "description": "分页获取角色列表，支持按关键词、守卫筛选\n\n**测试用例：**\n1. 默认分页查询（page=1, per_page=20）\n2. 按关键词搜索（keywords=admin）\n3. 按守卫筛选（guard_name=sanctum）\n4. 加载权限列表（with_permissions=true）",
+        "operationId": "getRoles",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "keywords", "in": "query", "description": "关键词搜索（角色名称/显示名称）", "schema": { "type": "string" } },
+          { "name": "guard_name", "in": "query", "description": "守卫筛选", "schema": { "type": "string" } },
+          { "name": "with_permissions", "in": "query", "description": "是否加载权限", "schema": { "type": "boolean", "default": false } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "per_page", "in": "query", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "example": { "code": 200, "msg": "success", "data": { "list": [{ "id": 1, "name": "admin", "display_name": "管理员", "group": "系统角色", "guard_name": "sanctum", "created_at": "2025-11-14T00:00:00.000Z" }], "total": 1 } }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Iam/Role"],
+        "summary": "创建角色",
+        "description": "创建新角色，可同时分配权限\n\n**测试用例：**\n1. 创建基础角色（无权限）\n2. 创建管理角色（分配权限）",
+        "operationId": "createRole",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "examples": {
+                "基础角色": {
+                  "summary": "创建基础角色",
+                  "value": { "name": "editor", "display_name": "编辑员", "group": "业务角色" }
+                },
+                "管理角色": {
+                  "summary": "创建管理角色",
+                  "value": { "name": "admin", "display_name": "管理员", "group": "系统角色", "permissions": [1, 2, 3] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "创建成功",
+            "content": {
+              "application/json": {
+                "example": { "code": 200, "msg": "角色创建成功", "data": { "id": 1, "name": "admin", "display_name": "管理员", "group": "系统角色", "guard_name": "sanctum" } }
+              }
+            }
+          },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/iam/roles/{id}": {
+      "get": {
+        "tags": ["Iam/Role"],
+        "summary": "查看角色详情",
+        "description": "查看指定角色的详细信息",
+        "operationId": "getRole",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "with_permissions", "in": "query", "description": "是否加载权限", "schema": { "type": "boolean", "default": false } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "example": { "code": 200, "msg": "success", "data": { "id": 1, "name": "admin", "display_name": "管理员", "group": "系统角色", "guard_name": "sanctum", "created_at": "2025-11-14T00:00:00.000Z" } }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Iam/Role"],
+        "summary": "更新角色",
+        "description": "更新角色信息，所有字段均为可选\n\n**测试用例：**\n1. 更新基本信息（显示名称）\n2. 更新权限列表",
+        "operationId": "updateRole",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "examples": {
+                "更新名称": {
+                  "summary": "更新显示名称",
+                  "value": { "display_name": "超级管理员" }
+                },
+                "更新权限": {
+                  "summary": "更新权限列表",
+                  "value": { "permissions": [1, 2, 3, 4, 5] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "example": { "code": 200, "msg": "角色更新成功", "data": { "id": 1, "name": "admin", "display_name": "超级管理员", "group": "系统角色" } }
+              }
+            }
+          },
+          "422": { "$ref": "#/components/responses/ValidationError" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Iam/Role"],
+        "summary": "删除角色",
+        "description": "删除指定角色，系统预置角色（super-admin）禁止删除",
+        "operationId": "deleteRole",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功",
+            "content": {
+              "application/json": {
+                "example": { "code": 200, "msg": "角色删除成功", "data": null }
+              }
+            }
+          },
+          "422": {
+            "description": "业务错误",
+            "content": {
+              "application/json": {
+                "example": { "code": 422, "msg": "系统预置角色禁止删除", "data": null }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Token"
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "未授权",
+        "content": {
+          "application/json": {
+            "example": { "code": 401, "msg": "未授权访问", "data": null }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "资源不存在",
+        "content": {
+          "application/json": {
+            "example": { "code": 404, "msg": "资源不存在", "data": null }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "数据校验失败",
+        "content": {
+          "application/json": {
+            "example": { "code": 422, "msg": "数据校验失败", "data": { "errors": { "name": ["角色名称不能为空"] } } }
+          }
+        }
+      }
+    }
+  }
+}

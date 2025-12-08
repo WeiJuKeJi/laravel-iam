@@ -1,0 +1,118 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "前端路由 API",
+    "description": "获取当前用户有权限访问的前端路由菜单，用于动态生成前端路由配置",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/iam/routes": {
+      "get": {
+        "tags": ["Iam/Route"],
+        "summary": "获取用户路由菜单",
+        "description": "根据当前用户的角色和权限，返回其有权限访问的路由菜单树形结构。\n支持缓存，可通过 refresh 参数强制刷新。\n\n**测试用例：**\n1. 获取菜单（使用缓存）\n2. 强制刷新菜单（refresh=true）",
+        "operationId": "getRoutes",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "refresh", "in": "query", "description": "是否强制刷新缓存", "schema": { "type": "boolean", "default": false } },
+          { "name": "force", "in": "query", "description": "是否强制刷新（同 refresh）", "schema": { "type": "boolean", "default": false } },
+          { "name": "invalidate", "in": "query", "description": "是否使缓存失效（同 refresh）", "schema": { "type": "boolean", "default": false } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "headers": {
+              "X-Menu-Version": {
+                "description": "菜单版本号，用于缓存控制",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 200,
+                  "msg": "success",
+                  "data": {
+                    "version": "1732435200",
+                    "routes": [
+                      {
+                        "path": "/dashboard",
+                        "name": "Dashboard",
+                        "component": "/@/views/dashboard/index.vue",
+                        "meta": {
+                          "title": "仪表盘",
+                          "icon": "dashboard-line",
+                          "badge": null,
+                          "dot": false,
+                          "hidden": false,
+                          "levelHidden": false,
+                          "isCustomSvg": false,
+                          "noClosable": false,
+                          "noKeepAlive": false,
+                          "tabHidden": false
+                        }
+                      },
+                      {
+                        "path": "/iam",
+                        "name": "System",
+                        "component": "Layout",
+                        "redirect": null,
+                        "meta": {
+                          "title": "系统管理",
+                          "icon": "settings-3-line"
+                        },
+                        "children": [
+                          {
+                            "path": "user",
+                            "name": "User",
+                            "component": "Layout",
+                            "meta": {
+                              "title": "用户管理",
+                              "icon": "shield-user-line"
+                            },
+                            "children": [
+                              {
+                                "path": "users",
+                                "name": "UserManagement",
+                                "component": "/@/views/iam/user/index.vue",
+                                "meta": {
+                                  "title": "用户管理",
+                                  "icon": "user-3-line"
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Token"
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "未授权",
+        "content": {
+          "application/json": {
+            "example": { "code": 401, "msg": "未授权访问", "data": null }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,27 @@
+<?php
+
+namespace WeiJuKeJi\LaravelIam\Http\Resources;
+
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class RoleResource extends JsonResource
+{
+    public function toArray($request): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'display_name' => $this->display_name,
+            'group' => $this->group,
+            'guard_name' => $this->guard_name,
+            'metadata' => $this->metadata,
+            'created_at' => $this->created_at?->toISOString(),
+            'updated_at' => $this->updated_at?->toISOString(),
+            'permissions' => $this->whenLoaded(
+                'permissions',
+                fn () => PermissionResource::collection($this->permissions)->toArray($request),
+                []
+            ),
+        ];
+    }
+}

@@ -1,0 +1,207 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "用户管理 API",
+    "description": "用户管理相关接口，包括用户的创建、查询、更新和删除功能",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/iam/users": {
+      "get": {
+        "tags": ["Iam/User"],
+        "summary": "获取用户列表",
+        "description": "分页获取用户列表，支持按状态、邮箱、用户名、角色等条件筛选\n\n**测试用例：**\n1. 默认分页查询（page=1, per_page=20）\n2. 按状态筛选（status=active）\n3. 按关键词搜索（keywords=张三）\n4. 按角色筛选（role=admin）\n5. 组合查询：状态+关键词",
+        "operationId": "getUsers",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "status", "in": "query", "description": "状态筛选", "schema": { "type": "string", "enum": ["active", "inactive"] } },
+          { "name": "keywords", "in": "query", "description": "关键词搜索（姓名/邮箱/用户名）", "schema": { "type": "string" } },
+          { "name": "email", "in": "query", "description": "邮箱筛选", "schema": { "type": "string" } },
+          { "name": "username", "in": "query", "description": "用户名筛选", "schema": { "type": "string" } },
+          { "name": "role", "in": "query", "description": "角色筛选", "schema": { "type": "string" } },
+          { "name": "with_roles", "in": "query", "description": "是否加载角色", "schema": { "type": "boolean", "default": false } },
+          { "name": "with_permissions", "in": "query", "description": "是否加载权限", "schema": { "type": "boolean", "default": false } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "per_page", "in": "query", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "example": { "code": 200, "msg": "success", "data": { "list": [{ "id": 1, "name": "张三", "username": "zhangsan", "email": "zhangsan@example.com", "status": "active", "status_text": "启用", "phone": "13800138000", "created_at": "2025-11-14T00:00:00.000Z" }], "total": 1 } }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Iam/User"],
+        "summary": "创建用户",
+        "description": "创建新用户，可同时分配角色\n\n**测试用例：**\n1. 创建普通用户（无角色）\n2. 创建管理员用户（分配角色）",
+        "operationId": "createUser",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "examples": {
+                "普通用户": {
+                  "summary": "创建普通用户",
+                  "value": { "name": "张三", "username": "zhangsan", "email": "zhangsan@example.com", "password": "password123", "phone": "13800138000", "status": "active" }
+                },
+                "管理员用户": {
+                  "summary": "创建管理员用户",
+                  "value": { "name": "李四", "username": "lisi", "email": "lisi@example.com", "password": "password123", "status": "active", "roles": [1, 2] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "创建成功",
+            "content": {
+              "application/json": {
+                "example": { "code": 200, "msg": "用户创建成功", "data": { "id": 1, "name": "张三", "username": "zhangsan", "email": "zhangsan@example.com", "status": "active", "status_text": "启用" } }
+              }
+            }
+          },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/iam/users/{id}": {
+      "get": {
+        "tags": ["Iam/User"],
+        "summary": "查看用户详情",
+        "description": "查看指定用户的详细信息",
+        "operationId": "getUser",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "with_roles", "in": "query", "description": "是否加载角色", "schema": { "type": "boolean", "default": false } },
+          { "name": "with_permissions", "in": "query", "description": "是否加载权限", "schema": { "type": "boolean", "default": false } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "example": { "code": 200, "msg": "success", "data": { "id": 1, "name": "张三", "username": "zhangsan", "email": "zhangsan@example.com", "status": "active", "status_text": "启用", "phone": "13800138000", "created_at": "2025-11-14T00:00:00.000Z" } }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Iam/User"],
+        "summary": "更新用户",
+        "description": "更新用户信息，所有字段均为可选\n\n**测试用例：**\n1. 更新基本信息（姓名、电话）\n2. 更新密码\n3. 停用用户",
+        "operationId": "updateUser",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "examples": {
+                "更新基本信息": {
+                  "summary": "更新姓名和电话",
+                  "value": { "name": "张三丰", "phone": "13900139000" }
+                },
+                "更新密码": {
+                  "summary": "修改密码",
+                  "value": { "password": "newpassword123" }
+                },
+                "停用用户": {
+                  "summary": "停用用户",
+                  "value": { "status": "inactive" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "example": { "code": 200, "msg": "用户更新成功", "data": { "id": 1, "name": "张三丰", "username": "zhangsan", "email": "zhangsan@example.com", "status": "active", "status_text": "启用" } }
+              }
+            }
+          },
+          "422": { "$ref": "#/components/responses/ValidationError" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Iam/User"],
+        "summary": "删除用户",
+        "description": "删除指定用户及其所有令牌",
+        "operationId": "deleteUser",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功",
+            "content": {
+              "application/json": {
+                "example": { "code": 200, "msg": "用户删除成功", "data": null }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Token"
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "未授权",
+        "content": {
+          "application/json": {
+            "example": { "code": 401, "msg": "未授权访问", "data": null }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "资源不存在",
+        "content": {
+          "application/json": {
+            "example": { "code": 404, "msg": "资源不存在", "data": null }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "数据校验失败",
+        "content": {
+          "application/json": {
+            "example": { "code": 422, "msg": "数据校验失败", "data": { "errors": { "email": ["邮箱格式不正确"], "password": ["密码长度至少8位"] } } }
+          }
+        }
+      }
+    }
+  }
+}

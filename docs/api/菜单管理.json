@@ -1,0 +1,237 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "菜单管理 API",
+    "description": "菜单管理相关接口，包括菜单的创建、查询、更新和删除功能，支持树形结构展示",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/iam/menus": {
+      "get": {
+        "tags": ["Iam/Menu"],
+        "summary": "获取菜单列表（分页）",
+        "description": "分页获取菜单列表，返回扁平数据结构，支持按父级、名称、路径、状态筛选\n\n**测试用例：**\n1. 默认分页查询（page=1, per_page=20）\n2. 按父级筛选（parent_id=1）\n3. 按名称搜索（name=User）\n4. 按启用状态筛选（is_enabled=true）",
+        "operationId": "getMenus",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "parent_id", "in": "query", "description": "父级菜单ID筛选", "schema": { "type": "integer" } },
+          { "name": "name", "in": "query", "description": "路由名称搜索", "schema": { "type": "string" } },
+          { "name": "path", "in": "query", "description": "路由路径搜索", "schema": { "type": "string" } },
+          { "name": "is_enabled", "in": "query", "description": "启用状态筛选", "schema": { "type": "boolean" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "per_page", "in": "query", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "example": { "code": 200, "msg": "success", "data": { "list": [{ "id": 1, "parent_id": null, "name": "Dashboard", "path": "/dashboard", "component": "/@/views/dashboard/index.vue", "sort_order": 0, "is_enabled": true, "meta": { "title": "仪表盘", "icon": "dashboard-line" }, "created_at": "2025-11-14T00:00:00.000Z" }], "total": 1 } }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Iam/Menu"],
+        "summary": "创建菜单",
+        "description": "创建新菜单，可同时关联角色和权限\n\n**测试用例：**\n1. 创建顶级菜单\n2. 创建子菜单（带权限）",
+        "operationId": "createMenu",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "examples": {
+                "顶级菜单": {
+                  "summary": "创建顶级菜单",
+                  "value": { "name": "System", "path": "/system", "component": "Layout", "sort_order": 10, "is_enabled": true, "meta": { "title": "系统管理", "icon": "settings-line" } }
+                },
+                "子菜单": {
+                  "summary": "创建子菜单（带权限）",
+                  "value": { "parent_id": 1, "name": "UserManagement", "path": "users", "component": "/@/views/iam/user/index.vue", "sort_order": 0, "is_enabled": true, "meta": { "title": "用户管理", "icon": "user-line" }, "permission_ids": [1, 2] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "创建成功",
+            "content": {
+              "application/json": {
+                "example": { "code": 200, "msg": "菜单创建成功", "data": { "id": 1, "parent_id": null, "name": "System", "path": "/system", "component": "Layout", "sort_order": 10, "is_enabled": true } }
+              }
+            }
+          },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/iam/menus/tree": {
+      "get": {
+        "tags": ["Iam/Menu"],
+        "summary": "获取菜单树",
+        "description": "获取完整的菜单树形结构，包含所有层级关系，支持筛选\n\n**测试用例：**\n1. 获取完整菜单树\n2. 按启用状态筛选（is_enabled=true）\n3. 按父级筛选获取子树（parent_id=1）",
+        "operationId": "getMenuTree",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "parent_id", "in": "query", "description": "父级菜单ID筛选", "schema": { "type": "integer" } },
+          { "name": "name", "in": "query", "description": "路由名称搜索", "schema": { "type": "string" } },
+          { "name": "path", "in": "query", "description": "路由路径搜索", "schema": { "type": "string" } },
+          { "name": "is_enabled", "in": "query", "description": "启用状态筛选", "schema": { "type": "boolean" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "example": { "code": 200, "msg": "success", "data": [{ "id": 1, "parent_id": null, "name": "System", "path": "/system", "component": "Layout", "sort_order": 10, "is_enabled": true, "meta": { "title": "系统管理", "icon": "settings-line" }, "roles": [], "permissions": [], "children": [{ "id": 2, "parent_id": 1, "name": "UserManagement", "path": "users", "component": "/@/views/iam/user/index.vue", "sort_order": 0, "is_enabled": true, "meta": { "title": "用户管理", "icon": "user-line" }, "roles": [], "permissions": [{ "id": 1, "name": "iam.users.view" }], "children": [] }] }] }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/iam/menus/{id}": {
+      "get": {
+        "tags": ["Iam/Menu"],
+        "summary": "查看菜单详情",
+        "description": "查看指定菜单的详细信息",
+        "operationId": "getMenu",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "example": { "code": 200, "msg": "success", "data": { "id": 1, "parent_id": null, "name": "System", "path": "/system", "component": "Layout", "sort_order": 10, "is_enabled": true, "meta": { "title": "系统管理", "icon": "settings-line" }, "roles": [], "permissions": [], "children": [] } }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Iam/Menu"],
+        "summary": "更新菜单",
+        "description": "更新菜单信息，所有字段均为可选\n\n**测试用例：**\n1. 更新基本信息（名称、路径）\n2. 更新排序和状态\n3. 更新关联权限",
+        "operationId": "updateMenu",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "examples": {
+                "更新基本信息": {
+                  "summary": "更新名称和路径",
+                  "value": { "name": "SystemManagement", "path": "/system-management" }
+                },
+                "更新排序": {
+                  "summary": "调整排序和启用状态",
+                  "value": { "sort_order": 5, "is_enabled": false }
+                },
+                "更新权限": {
+                  "summary": "更新关联权限",
+                  "value": { "permission_ids": [1, 2, 3] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "example": { "code": 200, "msg": "菜单更新成功", "data": { "id": 1, "parent_id": null, "name": "SystemManagement", "path": "/system-management", "sort_order": 5 } }
+              }
+            }
+          },
+          "422": { "$ref": "#/components/responses/ValidationError" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Iam/Menu"],
+        "summary": "删除菜单",
+        "description": "删除指定菜单，必须先删除所有子菜单",
+        "operationId": "deleteMenu",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功",
+            "content": {
+              "application/json": {
+                "example": { "code": 200, "msg": "菜单已删除", "data": null }
+              }
+            }
+          },
+          "422": {
+            "description": "业务错误",
+            "content": {
+              "application/json": {
+                "example": { "code": 422, "msg": "请先删除子菜单", "data": null }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Token"
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "未授权",
+        "content": {
+          "application/json": {
+            "example": { "code": 401, "msg": "未授权访问", "data": null }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "资源不存在",
+        "content": {
+          "application/json": {
+            "example": { "code": 404, "msg": "资源不存在", "data": null }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "数据校验失败",
+        "content": {
+          "application/json": {
+            "example": { "code": 422, "msg": "数据校验失败", "data": { "errors": { "name": ["路由名称不能为空"], "path": ["路由路径不能为空"] } } }
+          }
+        }
+      }
+    }
+  }
+}
