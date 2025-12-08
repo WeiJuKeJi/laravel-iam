@@ -9,7 +9,7 @@ use WeiJuKeJi\LaravelIam\Http\Controllers\RoleController;
 use WeiJuKeJi\LaravelIam\Http\Controllers\UserController;
 
 Route::middleware(['api'])
-    ->prefix(config('iam.route_prefix', 'api/v1/iam'))
+    ->prefix(config('iam.route_prefix', 'api/iam'))
     ->name('iam.')
     ->group(function () {
         // 登录接口添加速率限制：每分钟最多 5 次
