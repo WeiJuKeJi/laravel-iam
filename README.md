@@ -265,6 +265,64 @@ $menuService->flushCache();
 - 路由映射
 - 角色和权限关联
 - 自动缓存管理
+- **外链支持** - 跳转到外部网站
+- **内嵌网页** - 在系统内嵌入第三方页面
+
+#### 外链配置
+
+```json
+{
+  "name": "ExternalLink",
+  "path": "//github.com/your-repo",
+  "meta": {
+    "title": "GitHub",
+    "icon": "external-link-line",
+    "target": "_blank"
+  }
+}
+```
+
+关键字段：
+- `path`: 以 `//` 开头的外部链接
+- `meta.target`: 设为 `_blank` 在新标签页打开
+
+#### 内嵌网页配置
+
+```json
+{
+  "name": "Iframe",
+  "path": "/iframe",
+  "component": "Layout",
+  "meta": {
+    "title": "内嵌网页",
+    "icon": "window-line"
+  },
+  "children": [
+    {
+      "name": "IframeView",
+      "path": "view",
+      "component": "/@/views/other/iframe/view.vue",
+      "meta": {
+        "title": "Iframe",
+        "dynamicNewTab": true,
+        "hidden": true
+      }
+    },
+    {
+      "name": "DocSite",
+      "path": "view?url=example.com&title=文档站点",
+      "meta": {
+        "title": "文档站点"
+      }
+    }
+  ]
+}
+```
+
+关键字段：
+- `meta.dynamicNewTab`: 动态标签页
+- `meta.hidden`: 隐藏菜单项
+- `path`: 使用 `view?url=xxx&title=xxx` 格式传递参数
 
 ## 前端集成
 

@@ -50,5 +50,45 @@
         }
       }
     ]
+  },
+  {
+    "name": "ExternalLink",
+    "path": "//github.com",
+    "meta": {
+      "title": "外链示例",
+      "icon": "external-link-line",
+      "target": "_blank"
+    },
+    "is_enabled": false
+  },
+  {
+    "name": "Iframe",
+    "path": "/iframe",
+    "component": "Layout",
+    "meta": {
+      "title": "内嵌网页",
+      "icon": "window-line"
+    },
+    "is_enabled": false,
+    "children": [
+      {
+        "name": "IframeView",
+        "path": "view",
+        "component": "/@/views/other/iframe/view.vue",
+        "meta": {
+          "title": "Iframe",
+          "icon": "window-line",
+          "dynamicNewTab": true,
+          "hidden": true
+        }
+      },
+      {
+        "name": "IframeExample",
+        "path": "view?url=example.com&title=示例网站",
+        "meta": {
+          "title": "示例网站"
+        }
+      }
+    ]
   }
 ]
