@@ -1,207 +1,894 @@
-# 前端实现指南：动态菜单与后台管理
+# 菜单管理前端对接指南
 
-本文面向负责实现 **菜单路由加载** 与 **菜单管理后台** 的前端同学，提供从数据交互到界面落地的完整指引。请严格遵循本指南，以便与后端能力无缝衔接。
-
----
-
-## 1. 项目背景与目标
-
-1. **动态路由装载**：前端在用户登录后需要向后端拉取 `/api/v1/iam/routes` 返回的菜单树，根据用户角色/权限动态生成导航、侧边菜单及路由配置。
-2. **菜单后台管理**：提供“菜单管理”页面，支持查看树形菜单、增删改节点、配置角色/权限绑定，并在操作完成后即时刷新前端缓存。
-3. **缓存与版本**：利用响应头 `X-Menu-Version` 与返回数据中的 `version` 字段，实现菜单的增量刷新与缓存命中控制。
+本文档面向前端开发者，提供 Laravel IAM 菜单管理模块的完整对接指南。
 
 ---
 
-## 2. 接口与数据结构
+## 1. API 接口说明
 
-### 2.1 API 列表
+### 1.1 基础信息
 
-| 接口 | 方法 | 权限要求 | 说明 |
-| --- | --- | --- | --- |
-| `/api/v1/iam/routes` | `GET` | 登录态（`auth:sanctum`） | 获取当前用户可访问的菜单路由树，输出 `{list,total,version}`。 |
-| `/api/v1/iam/menus` | `GET` | `iam.menus.view` | 获取后台管理使用的完整菜单树（含角色/权限绑定）。 |
-| `/api/v1/iam/menus` | `POST` | `iam.menus.manage` | 新建菜单节点。 |
-| `/api/v1/iam/menus/{menu}` | `GET` | `iam.menus.view` | 查询指定节点详情，用于编辑前填充。 |
-| `/api/v1/iam/menus/{menu}` | `PUT` | `iam.menus.manage` | 更新节点及其绑定。 |
-| `/api/v1/iam/menus/{menu}` | `DELETE` | `iam.menus.manage` | 删除节点（须无子节点）。 |
+- **Base URL**: `/api/iam`（可通过 `config('iam.route_prefix')` 配置）
+- **认证方式**: Bearer Token（Sanctum）
+- **请求头**:
+  ```
+  Authorization: Bearer {token}
+  Accept: application/json
+  Content-Type: application/json
+  ```
 
-### 2.2 请求头规范
+### 1.2 接口列表
 
-- 所有接口均需携带：
-  - `Authorization: Bearer {token}`
-  - `Accept: application/json`
-  - 写操作额外包含 `Content-Type: application/json`
+| 接口 | 方法 | 权限 | 说明 |
+|------|------|------|------|
+| `/api/iam/routes` | GET | 登录即可 | 获取当前用户的菜单路由树 |
+| `/api/iam/menus` | GET | `iam.menus.view` | 获取完整菜单列表（分页） |
+| `/api/iam/menus/tree` | GET | `iam.menus.view` | 获取完整菜单树 |
+| `/api/iam/menus` | POST | `iam.menus.manage` | 创建菜单 |
+| `/api/iam/menus/{id}` | GET | `iam.menus.view` | 获取菜单详情 |
+| `/api/iam/menus/{id}` | PUT | `iam.menus.manage` | 更新菜单 |
+| `/api/iam/menus/{id}` | DELETE | `iam.menus.manage` | 删除菜单 |
 
-### 2.3 数据模型
+---
 
-#### 2.3.1 `/routes` 接口返回
+## 2. 数据结构
 
-```ts
-interface MenuRouteNode {
-  path: string
-  name: string
-  component: string | null
-  redirect?: string | null
-  meta?: Record<string, any>
-  guard?: string[] | { role: string[]; mode: 'include' | 'except' }
-  children?: MenuRouteNode[]
-}
+### 2.1 菜单节点结构
 
-interface RouteResponse {
-  code: number
-  msg: string
-  data: {
-    list: MenuRouteNode[]
-    total: number
-    version: string
-  }
-}
-```
-
-#### 2.3.2 `/menus` 接口返回
-
-```ts
-interface MenuTreeNode extends MenuRouteNode {
+```typescript
+interface MenuNode {
   id: number
   parent_id: number | null
-  sort_order: number
-  is_enabled: boolean
-  roles: string[]
-  permissions: string[]
-  children?: MenuTreeNode[]
+  name: string                    // 路由名称，需唯一
+  path: string                    // 路由路径
+  component: string | null        // 组件路径
+  redirect: string | null         // 重定向地址
+  sort_order: number              // 排序值，越小越靠前
+  is_enabled: boolean             // 是否启用
+  meta: MenuMeta                  // 路由元信息
+  guard: string[] | GuardConfig   // 守卫配置
+  roles: string[]                 // 关联角色名称
+  permissions: string[]           // 关联权限名称
+  children: MenuNode[]            // 子菜单
 }
 
-interface MenuListResponse {
+interface MenuMeta {
+  title: string                   // 菜单标题
+  icon?: string                   // 图标
+  hidden?: boolean                // 是否隐藏
+  noCache?: boolean               // 不缓存
+  affix?: boolean                 // 固定标签
+  breadcrumb?: boolean            // 显示面包屑
+  target?: '_blank' | '_self'     // 链接打开方式（外链用）
+  dynamicNewTab?: boolean         // 动态新标签页（iframe 用）
+  permissions?: string[]          // 前端权限验证
+  [key: string]: any              // 其他自定义字段
+}
+
+interface GuardConfig {
+  role: string[]
+  mode: 'include' | 'except'      // include=白名单, except=黑名单
+}
+```
+
+### 2.2 创建/更新请求体
+
+```typescript
+interface MenuInput {
+  parent_id?: number | null
+  name: string                    // 必填，唯一
+  path: string                    // 必填
+  component?: string | null
+  redirect?: string | null
+  sort_order?: number             // 默认 0
+  is_enabled?: boolean            // 默认 true
+  meta?: Record<string, any>
+  guard?: string[] | GuardConfig
+  role_ids?: number[]             // 关联角色 ID
+  permission_ids?: number[]       // 关联权限 ID
+}
+```
+
+### 2.3 API 响应格式
+
+```typescript
+// 成功响应
+interface SuccessResponse<T> {
+  code: number      // 200
+  msg: string       // "success"
+  data: T
+}
+
+// 列表响应
+interface ListResponse<T> {
   code: number
   msg: string
   data: {
-    list: MenuTreeNode[]
+    list: T[]
     total: number
+  }
+}
+
+// 错误响应
+interface ErrorResponse {
+  code: number      // 400/422/500
+  msg: string       // 错误信息
+  errors?: Record<string, string[]>  // 422 时的字段错误
+}
+```
+
+---
+
+## 3. 菜单类型说明
+
+### 3.1 普通路由菜单
+
+标准的系统内部页面路由：
+
+```json
+{
+  "name": "UserList",
+  "path": "users",
+  "component": "system/users/index",
+  "meta": {
+    "title": "用户管理",
+    "icon": "user",
+    "permissions": ["iam.users.view"]
   }
 }
 ```
 
-#### 2.3.3 创建/更新请求体
+### 3.2 布局/目录菜单
 
-```ts
-interface MenuInput {
-  parent_id: number | null
-  name: string
-  path: string
-  component?: string | null
-  redirect?: string | null
-  sort_order?: number
+作为父级容器，通常不对应具体页面：
+
+```json
+{
+  "name": "System",
+  "path": "/system",
+  "component": "Layout",
+  "redirect": "/system/users",
+  "meta": {
+    "title": "系统管理",
+    "icon": "setting"
+  },
+  "children": [...]
+}
+```
+
+### 3.3 外链菜单
+
+跳转到外部网站，在新标签页打开：
+
+```json
+{
+  "name": "ExternalLink",
+  "path": "//github.com/your-repo",
+  "component": null,
+  "meta": {
+    "title": "GitHub",
+    "icon": "external-link-line",
+    "target": "_blank"
+  }
+}
+```
+
+**前端判断逻辑**：
+```typescript
+function isExternalLink(path: string): boolean {
+  return /^(https?:|mailto:|tel:|\/\/)/.test(path)
+}
+```
+
+### 3.4 内嵌网页（Iframe）
+
+在系统内嵌入第三方页面：
+
+```json
+{
+  "name": "Iframe",
+  "path": "/iframe",
+  "component": "Layout",
+  "meta": {
+    "title": "内嵌网页",
+    "icon": "window-line"
+  },
+  "children": [
+    {
+      "name": "IframeView",
+      "path": "view",
+      "component": "/@/views/iframe/index.vue",
+      "meta": {
+        "title": "Iframe",
+        "dynamicNewTab": true,
+        "hidden": true
+      }
+    },
+    {
+      "name": "BaiduDoc",
+      "path": "view?url=www.baidu.com&title=百度",
+      "component": null,
+      "meta": {
+        "title": "百度"
+      }
+    }
+  ]
+}
+```
+
+**前端 Iframe 组件示例**：
+```vue
+<template>
+  <div class="iframe-container">
+    <iframe :src="iframeSrc" frameborder="0"></iframe>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
+
+const iframeSrc = computed(() => {
+  const url = route.query.url as string
+  if (!url) return ''
+  // 自动补全协议
+  return url.startsWith('http') ? url : `https://${url}`
+})
+</script>
+
+<style scoped>
+.iframe-container {
+  width: 100%;
+  height: calc(100vh - 84px);
+}
+.iframe-container iframe {
+  width: 100%;
+  height: 100%;
+}
+</style>
+```
+
+---
+
+## 4. 动态路由加载
+
+### 4.1 加载流程
+
+```
+用户登录 → 获取 Token → 调用 /routes → 解析菜单 → 动态注册路由 → 渲染侧边栏
+```
+
+### 4.2 Pinia Store 示例
+
+```typescript
+// stores/menu.ts
+import { defineStore } from 'pinia'
+import { getRoutes, getMenuTree } from '@/api/menu'
+
+interface MenuState {
+  routes: MenuNode[]
+  menus: MenuNode[]
+  isLoaded: boolean
+}
+
+export const useMenuStore = defineStore('menu', {
+  state: (): MenuState => ({
+    routes: [],
+    menus: [],
+    isLoaded: false
+  }),
+
+  actions: {
+    // 获取用户路由（用于动态路由）
+    async fetchRoutes(force = false) {
+      if (this.isLoaded && !force) return this.routes
+
+      const res = await getRoutes()
+      this.routes = res.data.list
+      this.isLoaded = true
+      return this.routes
+    },
+
+    // 获取完整菜单树（用于菜单管理）
+    async fetchMenuTree() {
+      const res = await getMenuTree()
+      this.menus = res.data.list
+      return this.menus
+    },
+
+    // 重置状态
+    resetMenu() {
+      this.routes = []
+      this.menus = []
+      this.isLoaded = false
+    }
+  }
+})
+```
+
+### 4.3 路由解析函数
+
+```typescript
+// utils/route-parser.ts
+import type { RouteRecordRaw } from 'vue-router'
+
+// 组件映射表
+const componentModules = import.meta.glob('@/views/**/*.vue')
+
+// 布局组件
+const Layout = () => import('@/layout/index.vue')
+
+export function parseRoutes(menus: MenuNode[]): RouteRecordRaw[] {
+  return menus.map(menu => {
+    const route: RouteRecordRaw = {
+      path: menu.path,
+      name: menu.name,
+      meta: {
+        title: menu.meta?.title,
+        icon: menu.meta?.icon,
+        hidden: menu.meta?.hidden,
+        ...menu.meta
+      },
+      children: []
+    }
+
+    // 处理组件
+    if (menu.component === 'Layout') {
+      route.component = Layout
+    } else if (menu.component) {
+      const componentPath = `/src/views/${menu.component}.vue`
+      route.component = componentModules[componentPath]
+    }
+
+    // 处理重定向
+    if (menu.redirect) {
+      route.redirect = menu.redirect
+    }
+
+    // 递归处理子菜单
+    if (menu.children?.length) {
+      route.children = parseRoutes(menu.children)
+    }
+
+    return route
+  })
+}
+```
+
+### 4.4 路由守卫
+
+```typescript
+// router/permission.ts
+import router from './index'
+import { useUserStore } from '@/stores/user'
+import { useMenuStore } from '@/stores/menu'
+import { parseRoutes } from '@/utils/route-parser'
+
+const whiteList = ['/login', '/404', '/403']
+
+router.beforeEach(async (to, from, next) => {
+  const userStore = useUserStore()
+  const menuStore = useMenuStore()
+
+  // 白名单直接放行
+  if (whiteList.includes(to.path)) {
+    return next()
+  }
+
+  // 未登录跳转登录页
+  if (!userStore.token) {
+    return next(`/login?redirect=${to.path}`)
+  }
+
+  // 已加载路由直接放行
+  if (menuStore.isLoaded) {
+    return next()
+  }
+
+  try {
+    // 获取用户信息和菜单
+    await userStore.fetchUserInfo()
+    const menus = await menuStore.fetchRoutes()
+
+    // 解析并注册动态路由
+    const routes = parseRoutes(menus)
+    routes.forEach(route => {
+      router.addRoute('Layout', route)
+    })
+
+    // 添加 404 兜底路由
+    router.addRoute({
+      path: '/:pathMatch(.*)*',
+      redirect: '/404'
+    })
+
+    // 重新导航到目标页面
+    next({ ...to, replace: true })
+  } catch (error) {
+    userStore.logout()
+    next('/login')
+  }
+})
+```
+
+---
+
+## 5. 菜单管理页面
+
+### 5.1 API 封装
+
+```typescript
+// api/menu.ts
+import request from '@/utils/request'
+
+// 获取用户路由
+export function getRoutes() {
+  return request.get('/api/iam/routes')
+}
+
+// 获取菜单树
+export function getMenuTree(params?: { is_enabled?: boolean }) {
+  return request.get('/api/iam/menus/tree', { params })
+}
+
+// 获取菜单列表（分页）
+export function getMenuList(params?: {
+  parent_id?: number
+  name?: string
   is_enabled?: boolean
-  meta?: Record<string, any>
-  guard?: string[] | { role: string[]; mode: 'include' | 'except' }
-  role_ids?: number[]
-  permission_ids?: number[]
+  per_page?: number
+  page?: number
+}) {
+  return request.get('/api/iam/menus', { params })
+}
+
+// 获取菜单详情
+export function getMenuDetail(id: number) {
+  return request.get(`/api/iam/menus/${id}`)
+}
+
+// 创建菜单
+export function createMenu(data: MenuInput) {
+  return request.post('/api/iam/menus', data)
+}
+
+// 更新菜单
+export function updateMenu(id: number, data: MenuInput) {
+  return request.put(`/api/iam/menus/${id}`, data)
+}
+
+// 删除菜单
+export function deleteMenu(id: number) {
+  return request.delete(`/api/iam/menus/${id}`)
+}
+```
+
+### 5.2 菜单表单组件
+
+```vue
+<template>
+  <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
+    <el-form-item label="父级菜单" prop="parent_id">
+      <el-tree-select
+        v-model="form.parent_id"
+        :data="menuTree"
+        :props="{ label: 'name', value: 'id' }"
+        placeholder="根菜单"
+        clearable
+        check-strictly
+      />
+    </el-form-item>
+
+    <el-form-item label="菜单类型">
+      <el-radio-group v-model="menuType" @change="handleTypeChange">
+        <el-radio value="route">页面路由</el-radio>
+        <el-radio value="directory">目录</el-radio>
+        <el-radio value="external">外链</el-radio>
+        <el-radio value="iframe">内嵌网页</el-radio>
+      </el-radio-group>
+    </el-form-item>
+
+    <el-form-item label="路由名称" prop="name">
+      <el-input v-model="form.name" placeholder="唯一标识，如 UserList" />
+    </el-form-item>
+
+    <el-form-item label="路由路径" prop="path">
+      <el-input v-model="form.path" :placeholder="pathPlaceholder" />
+    </el-form-item>
+
+    <el-form-item v-if="showComponent" label="组件路径" prop="component">
+      <el-input v-model="form.component" placeholder="如 system/users/index" />
+    </el-form-item>
+
+    <el-form-item v-if="menuType === 'iframe'" label="内嵌地址">
+      <el-input v-model="iframeUrl" placeholder="如 www.example.com" />
+    </el-form-item>
+
+    <el-form-item label="菜单标题" prop="meta.title">
+      <el-input v-model="form.meta.title" placeholder="显示名称" />
+    </el-form-item>
+
+    <el-form-item label="图标" prop="meta.icon">
+      <el-input v-model="form.meta.icon" placeholder="图标名称" />
+    </el-form-item>
+
+    <el-form-item label="排序">
+      <el-input-number v-model="form.sort_order" :min="0" :max="9999" />
+    </el-form-item>
+
+    <el-form-item label="是否启用">
+      <el-switch v-model="form.is_enabled" />
+    </el-form-item>
+
+    <el-form-item label="是否隐藏">
+      <el-switch v-model="form.meta.hidden" />
+    </el-form-item>
+
+    <el-form-item label="关联角色">
+      <el-select v-model="form.role_ids" multiple placeholder="选择角色">
+        <el-option
+          v-for="role in roles"
+          :key="role.id"
+          :label="role.display_name || role.name"
+          :value="role.id"
+        />
+      </el-select>
+    </el-form-item>
+
+    <el-form-item label="关联权限">
+      <el-select v-model="form.permission_ids" multiple placeholder="选择权限">
+        <el-option
+          v-for="perm in permissions"
+          :key="perm.id"
+          :label="perm.display_name || perm.name"
+          :value="perm.id"
+        />
+      </el-select>
+    </el-form-item>
+  </el-form>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, watch } from 'vue'
+
+const props = defineProps<{
+  modelValue: MenuInput
+  menuTree: MenuNode[]
+  roles: Role[]
+  permissions: Permission[]
+}>()
+
+const emit = defineEmits(['update:modelValue'])
+
+const form = computed({
+  get: () => props.modelValue,
+  set: (val) => emit('update:modelValue', val)
+})
+
+const menuType = ref('route')
+const iframeUrl = ref('')
+
+const showComponent = computed(() =>
+  ['route', 'directory'].includes(menuType.value)
+)
+
+const pathPlaceholder = computed(() => {
+  switch (menuType.value) {
+    case 'external': return '//github.com/your-repo'
+    case 'iframe': return 'view?url=xxx&title=xxx'
+    default: return '/system/users'
+  }
+})
+
+function handleTypeChange(type: string) {
+  switch (type) {
+    case 'directory':
+      form.value.component = 'Layout'
+      break
+    case 'external':
+      form.value.component = null
+      form.value.meta.target = '_blank'
+      break
+    case 'iframe':
+      form.value.meta.dynamicNewTab = true
+      break
+    default:
+      delete form.value.meta.target
+      delete form.value.meta.dynamicNewTab
+  }
+}
+
+// 监听 iframe URL 变化，自动更新 path
+watch(iframeUrl, (url) => {
+  if (menuType.value === 'iframe' && url) {
+    form.value.path = `view?url=${encodeURIComponent(url)}&title=${form.value.meta.title || ''}`
+  }
+})
+
+const rules = {
+  name: [{ required: true, message: '请输入路由名称', trigger: 'blur' }],
+  path: [{ required: true, message: '请输入路由路径', trigger: 'blur' }],
+  'meta.title': [{ required: true, message: '请输入菜单标题', trigger: 'blur' }]
+}
+</script>
+```
+
+### 5.3 菜单列表页面
+
+```vue
+<template>
+  <div class="menu-management">
+    <!-- 操作栏 -->
+    <div class="action-bar">
+      <el-button type="primary" @click="handleAdd">
+        <el-icon><Plus /></el-icon>
+        新增菜单
+      </el-button>
+      <el-button @click="handleRefresh">
+        <el-icon><Refresh /></el-icon>
+        刷新
+      </el-button>
+    </div>
+
+    <!-- 菜单树表格 -->
+    <el-table
+      :data="menuTree"
+      row-key="id"
+      :tree-props="{ children: 'children' }"
+      v-loading="loading"
+    >
+      <el-table-column prop="name" label="路由名称" width="200" />
+      <el-table-column prop="meta.title" label="菜单标题" width="150" />
+      <el-table-column prop="path" label="路由路径" min-width="200" />
+      <el-table-column prop="component" label="组件" width="200" />
+      <el-table-column prop="sort_order" label="排序" width="80" align="center" />
+      <el-table-column label="状态" width="80" align="center">
+        <template #default="{ row }">
+          <el-tag :type="row.is_enabled ? 'success' : 'info'">
+            {{ row.is_enabled ? '启用' : '禁用' }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="类型" width="100" align="center">
+        <template #default="{ row }">
+          <el-tag v-if="isExternalLink(row.path)" type="warning">外链</el-tag>
+          <el-tag v-else-if="row.meta?.dynamicNewTab" type="info">内嵌</el-tag>
+          <el-tag v-else-if="row.component === 'Layout'">目录</el-tag>
+          <el-tag v-else type="success">页面</el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="200" fixed="right">
+        <template #default="{ row }">
+          <el-button link type="primary" @click="handleEdit(row)">编辑</el-button>
+          <el-button link type="primary" @click="handleAddChild(row)">添加子菜单</el-button>
+          <el-popconfirm
+            title="确定删除此菜单？"
+            @confirm="handleDelete(row)"
+          >
+            <template #reference>
+              <el-button link type="danger" :disabled="row.children?.length > 0">
+                删除
+              </el-button>
+            </template>
+          </el-popconfirm>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <!-- 编辑弹窗 -->
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px">
+      <MenuForm
+        v-model="formData"
+        :menu-tree="menuTree"
+        :roles="roles"
+        :permissions="permissions"
+      />
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleSubmit">
+          确定
+        </el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Plus, Refresh } from '@element-plus/icons-vue'
+import {
+  getMenuTree,
+  createMenu,
+  updateMenu,
+  deleteMenu
+} from '@/api/menu'
+import { getRoleList } from '@/api/role'
+import { getPermissionList } from '@/api/permission'
+import { useMenuStore } from '@/stores/menu'
+import MenuForm from './components/MenuForm.vue'
+
+const menuStore = useMenuStore()
+
+const loading = ref(false)
+const submitting = ref(false)
+const dialogVisible = ref(false)
+const dialogTitle = ref('')
+const menuTree = ref<MenuNode[]>([])
+const roles = ref<Role[]>([])
+const permissions = ref<Permission[]>([])
+const formData = ref<MenuInput>(getDefaultForm())
+const editingId = ref<number | null>(null)
+
+function getDefaultForm(): MenuInput {
+  return {
+    parent_id: null,
+    name: '',
+    path: '',
+    component: '',
+    redirect: '',
+    sort_order: 0,
+    is_enabled: true,
+    meta: { title: '', icon: '' },
+    guard: [],
+    role_ids: [],
+    permission_ids: []
+  }
+}
+
+function isExternalLink(path: string): boolean {
+  return /^(https?:|mailto:|tel:|\/\/)/.test(path)
+}
+
+async function fetchData() {
+  loading.value = true
+  try {
+    const [menuRes, roleRes, permRes] = await Promise.all([
+      getMenuTree(),
+      getRoleList({ per_page: 100 }),
+      getPermissionList({ per_page: 200 })
+    ])
+    menuTree.value = menuRes.data.list
+    roles.value = roleRes.data.list
+    permissions.value = permRes.data.list
+  } finally {
+    loading.value = false
+  }
+}
+
+function handleAdd() {
+  editingId.value = null
+  formData.value = getDefaultForm()
+  dialogTitle.value = '新增菜单'
+  dialogVisible.value = true
+}
+
+function handleAddChild(parent: MenuNode) {
+  editingId.value = null
+  formData.value = { ...getDefaultForm(), parent_id: parent.id }
+  dialogTitle.value = `新增子菜单 - ${parent.meta?.title}`
+  dialogVisible.value = true
+}
+
+function handleEdit(row: MenuNode) {
+  editingId.value = row.id
+  formData.value = {
+    parent_id: row.parent_id,
+    name: row.name,
+    path: row.path,
+    component: row.component,
+    redirect: row.redirect,
+    sort_order: row.sort_order,
+    is_enabled: row.is_enabled,
+    meta: { ...row.meta },
+    guard: row.guard,
+    role_ids: [], // 需要从详情接口获取
+    permission_ids: []
+  }
+  dialogTitle.value = '编辑菜单'
+  dialogVisible.value = true
+}
+
+async function handleDelete(row: MenuNode) {
+  if (row.children?.length) {
+    ElMessage.warning('请先删除子菜单')
+    return
+  }
+  try {
+    await deleteMenu(row.id)
+    ElMessage.success('删除成功')
+    await fetchData()
+    // 刷新路由缓存
+    await menuStore.fetchRoutes(true)
+  } catch (error: any) {
+    ElMessage.error(error.message || '删除失败')
+  }
+}
+
+async function handleSubmit() {
+  submitting.value = true
+  try {
+    if (editingId.value) {
+      await updateMenu(editingId.value, formData.value)
+      ElMessage.success('更新成功')
+    } else {
+      await createMenu(formData.value)
+      ElMessage.success('创建成功')
+    }
+    dialogVisible.value = false
+    await fetchData()
+    // 刷新路由缓存
+    await menuStore.fetchRoutes(true)
+  } catch (error: any) {
+    ElMessage.error(error.message || '操作失败')
+  } finally {
+    submitting.value = false
+  }
+}
+
+function handleRefresh() {
+  fetchData()
+}
+
+onMounted(() => {
+  fetchData()
+})
+</script>
+
+<style scoped>
+.menu-management {
+  padding: 20px;
+}
+.action-bar {
+  margin-bottom: 16px;
+}
+</style>
+```
+
+---
+
+## 6. 错误处理
+
+### 6.1 HTTP 状态码
+
+| 状态码 | 说明 | 处理方式 |
+|--------|------|----------|
+| 200 | 成功 | 正常处理 |
+| 401 | 未认证 | 跳转登录页 |
+| 403 | 无权限 | 显示无权限提示 |
+| 422 | 验证失败 | 显示字段错误信息 |
+| 500 | 服务器错误 | 显示通用错误提示 |
+
+### 6.2 业务错误
+
+```typescript
+// 删除菜单时
+if (response.code === 422 && response.msg.includes('子菜单')) {
+  ElMessage.warning('请先删除子菜单')
 }
 ```
 
 ---
 
-## 3. 动态路由加载方案
+## 7. 最佳实践
 
-### 3.1 流程总览
-
-1. **登录成功**：后端返回 token 后，前端保存至状态管理/本地存储。
-2. **拉取路由**：调用 `/routes` 接口获取菜单：
-   - 缓存策略：读取本地保存的 `version`；若存在并与接口返回不同，则更新缓存并刷新路由。
-   - 建议将 `{list, version}` 序列化后存储在 `localStorage` / `indexedDB`。
-   - 若需要强制刷新（例如用户调整菜单后后台立刻取到最新数据），可调用 `/routes?refresh=1`，后台会跳过缓存返回最新结果。
-3. **解析成路由配置**：
-   - 遍历 `list`，将 `component` 从字符串转换为实际组件（可采用 `defineAsyncComponent` 或已约定的动态 import 映射表）。
-   - 根据 `meta.guard`、`meta.role` 等字段设置 `meta.roles`、`meta.hidden`、`meta.icon` 等属性，供权限指令/导航菜单使用。
-4. **挂载路由**：将解析后的路由通过 `router.addRoute` 动态注册。根节点通常挂载在 `Layout` 下。
-5. **生成 UI 菜单**：将 `list` 直接作为侧边栏的数据源，渲染标题、图标、徽标、外链等属性。
-6. **守卫处理**：
-   - 登录路由守卫（`router.beforeEach`）中，若无菜单缓存则执行第 2 步；
-   - 检查 `meta.guard` 与当前用户角色/权限（登录接口已返回 `roles`、`permissions`），不满足时跳转 403 页面。
-
-### 3.2 缓存与刷新策略
-
-- **初始加载**：优先使用缓存中 `list` 渲染菜单，随后异步比对 `version`，若不一致再刷新。
-- **手动刷新**：菜单管理操作完成后，可触发 `dispatch('menu/fetchRoutes', { force: true })` 或直接请求 `/routes?refresh=1` 强制重拉。
-- **异常回退**：若接口报错，清空缓存并提示用户重新登录或联系管理员。
-
-### 3.3 推荐技术栈/结构
-
-- 状态管理：使用 Pinia 或 Vuex 保存 `menus`、`routes`、`version`。
-- 路由：Vue Router 动态加载；对 `component` 为 `Layout`、`Iframe` 等别名的节点单独处理。
-- 组件：提供 `<SidebarMenu>` 组件接收菜单树，递归渲染。
-- 权限指令：根据 `meta.guard` 与用户角色判断菜单显示与否。
+1. **缓存管理**：菜单数据变更后，务必调用 `menuStore.fetchRoutes(true)` 强制刷新
+2. **权限控制**：根据用户权限控制按钮显示，使用 `v-permission` 指令
+3. **组件懒加载**：使用 `import.meta.glob` 实现路由组件懒加载
+4. **外链判断**：统一使用 `isExternalLink()` 函数判断
+5. **iframe 安全**：内嵌第三方页面时注意 CSP 和 X-Frame-Options 限制
 
 ---
 
-## 4. 菜单管理后台实现指南
+## 8. Checklist
 
-### 4.1 页面功能需求
-
-1. **树形展示**：使用 Tree/Table 组件展示菜单层级，列出名称、路径、排序、启用状态、绑定角色/权限等信息。
-2. **搜索/过滤**：支持按名称、角色、启用状态过滤。
-3. **增/改操作**：
-   - 侧边抽屉或弹窗表单，包含上述 `MenuInput` 字段；
-   - `meta`/`guard` 字段可使用 JSON 编辑器或表单拆分（例如 title/icon/cache 等字段分别输入，再组装成对象）。
-   - 角色、权限字段提供多选框，从 `/v1/iam/roles`、`/v1/iam/permissions` 获取列表。
-4. **删除操作**：
-   - 先检查 `children.length` 是否大于 0，前端应给出“仅可删除叶子节点”的提示；
-   - 调用 DELETE 接口后刷新菜单树与 `/routes` 缓存。
-5. **拖拽排序（可选）**：若需要拖动排序，务必在拖动结束后提交新的 `parent_id` 与 `sort_order`。后端暂未提供批量排序接口，可在前端一次性调用 PUT。
-
-### 4.2 交互细节
-
-- **表单校验**：必填字段如 `name`、`path`、`component`（非布局节点）必须校验；`sort_order` 使用数字输入，提示优先级越低数值越大。
-- **状态提示**：接口成功后使用统一的消息提示（Success/Error），同时刷新列表。
-- **并发更新**：编辑弹窗打开时建议拷贝数据（防止直接修改树节点导致 UI 跳变）。
-- **权限显示**：根据当前用户权限，决定是否展示“新增菜单”按钮以及操作列的“编辑/删除”入口。
-- **缓存刷新**：在完成写操作后调用 `menuStore.fetchRoutes({ force: true })` 或直接清空缓存版本号，确保下一次导航即刻生效。
-
----
-
-## 5. 守卫与权限处理逻辑
-
-1. **登录阶段**：`/auth/me` 接口返回用户的 `roles`、`permissions`。前端在 `userStore` 中保存这两个集合，供菜单/按钮权限判断使用。
-2. **菜单渲染阶段**：
-   - 若 `meta.guard` 为空，表示所有登录用户可见；
-   - 若为数组，只有数组内的角色可见；
-   - 若对象 `{ role: ['Editor'], mode: 'except' }`，表示这些角色被排除；`mode: 'include'` 则为白名单。
-3. **按钮级别权限**：菜单管理页面可复用现有 `v-permission` 指令（或自定义 hooks），根据 `iam.menus.manage` 等权限控制按钮显示与接口调用。
-
----
-
-## 6. 错误处理与边界情况
-
-- **401/403**：跳转登录页或 403 页，并清除本地缓存的菜单/版本。
-- **422**：提示表单校验错误；当删除接口返回“请先删除子菜单”时，需定位到对应节点并引导用户操作。
-- **500**：提示“系统繁忙，请稍后再试”，同时记录埋点日志以便后端排查。
-- **网络超时**：重试机制建议 1-2 次，超过后提示用户手动刷新。
-- **组件映射失败**：若 `component` 对应的视图不存在，应在路由层 fallback 到 404 页面，并在控制台给出警告。
-
----
-
-## 7. 测试计划
-
-1. **单元测试**（可选）：对菜单树解析函数、守卫判断逻辑编写 Jest 测试。
-2. **集成测试**：利用 Mock 工具（例如 `msw` 或本地 `vite-plugin-mock`）模拟接口，验证缓存、版本号、权限切换等行为。
-3. **冒烟测试场景**：
-   - 登录不同角色（超级管理员、普通运营）验证菜单差异；
-   - 新增菜单→刷新→确认出现在路由列表；
-   - 删除菜单后验证 `/routes` 接口返回的版本号是否递增；
-   - `guard` 黑名单模式能否正确隐藏指定角色菜单。
-
----
-
-## 8. 落地 Checklist
-
-- [ ] 登录流程完成后调用 `/routes` 并缓存 `version`；
-- [ ] 动态注册路由并渲染侧边栏菜单；
-- [ ] `X-Menu-Version` 变更时重载菜单；
-- [ ] 菜单管理页面实现树展示、增删改、角色/权限绑定；
-- [ ] 写操作后刷新菜单缓存，确保下次访问生效；
-- [ ] 处理所有错误状态与 Loading 状态；
-- [ ] 完成功能冒烟和权限切换测试，确保 Apifox 文档与实现一致。
-
----
-
-有任何实现上的问题，请与后端沟通确认，禁止自定义接口字段或响应结构。建议在接入前先执行 Apifox 中的示例请求，确认接口可达后再联调实际页面。祝顺利！💪
+- [ ] 登录后正确加载动态路由
+- [ ] 侧边栏正确渲染菜单树
+- [ ] 外链菜单在新标签页打开
+- [ ] 内嵌网页正常显示
+- [ ] 菜单增删改查功能正常
+- [ ] 菜单变更后路由即时刷新
+- [ ] 权限控制正确生效
+- [ ] 错误状态正确处理
