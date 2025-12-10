@@ -21,13 +21,33 @@ Laravel Identity and Access Management (IAM) package - 一个完整的用户、�
 
 ## 安装
 
-### 1. 通过 Composer 安装
+### 快速安装（推荐）
+
+```bash
+# 1. 安装扩展包
+composer require weijukeji/laravel-iam
+
+# 2. 运行安装命令（发布配置、迁移、填充数据）
+php artisan iam:install --seed
+```
+
+安装命令支持以下选项：
+- `--seed` - 运行数据库填充（创建默认角色、权限、管理员账号）
+- `--force` - 覆盖已存在的配置文件
+- `--no-migrate` - 跳过数据库迁移
+- `--sync-permissions` - 同步路由权限
+
+### 手动安装
+
+如果需要更精细的控制，可以手动执行各个步骤：
+
+#### 1. 通过 Composer 安装
 
 ```bash
 composer require weijukeji/laravel-iam
 ```
 
-### 2. 发布配置文件
+#### 2. 发布配置文件
 
 ```bash
 php artisan vendor:publish --tag=iam-config
@@ -35,25 +55,26 @@ php artisan vendor:publish --tag=iam-config
 
 这将发布 `config/iam.php` 配置文件。
 
-### 3. 发布并运行迁移
+#### 3. 发布并运行迁移
 
 ```bash
 php artisan vendor:publish --tag=iam-migrations
 php artisan migrate
 ```
 
-### 4. （可选）发布 Seeders
-
-如果需要初始数据，可以发布 seeders：
+#### 4. （可选）运行数据填充
 
 ```bash
-php artisan vendor:publish --tag=iam-seeders
-php artisan db:seed --class=IamDatabaseSeeder
+php artisan db:seed --class="WeiJuKeJi\\LaravelIam\\Database\\Seeders\\IamDatabaseSeeder"
 ```
 
-### 5. （可选）发布视图
+这将创建：
+- 默认权限（用户/角色/权限/菜单管理）
+- 默认角色（super-admin、Admin、Editor）
+- 管理员账号：`admin@settlehub.local` / `Admin@123456`
+- 默认菜单结构
 
-如果需要自定义视图：
+#### 5. （可选）发布视图
 
 ```bash
 php artisan vendor:publish --tag=iam-views
@@ -147,6 +168,20 @@ CACHE_DRIVER=redis
 - `DELETE /v1/iam/permissions/{id}` - 删除权限
 
 ### Artisan 命令
+
+#### 安装扩展包
+
+一键安装并初始化 Laravel IAM：
+
+```bash
+php artisan iam:install [--seed] [--force] [--no-migrate] [--sync-permissions]
+```
+
+选项说明：
+- `--seed`：运行数据库填充
+- `--force`：覆盖已存在的配置文件
+- `--no-migrate`：跳过数据库迁移
+- `--sync-permissions`：同步路由权限
 
 #### 同步权限
 

@@ -44,6 +44,7 @@ class IamServiceProvider extends ServiceProvider
         // 注册 Artisan 命令
         if ($this->app->runningInConsole()) {
             $this->commands([
+                Console\Commands\InstallCommand::class,
                 Console\Commands\ExportMenusCommand::class,
                 Console\Commands\SyncPermissionsCommand::class,
                 Console\Commands\UninstallCommand::class,
