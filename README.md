@@ -199,6 +199,24 @@ php artisan iam:sync-permissions
 php artisan iam:menus:export [path]
 ```
 
+#### 重置菜单数据
+
+清空现有菜单数据并重新填充：
+
+```bash
+php artisan iam:menu:reseed [--force]
+```
+
+选项说明：
+- `--force`：跳过确认提示直接执行
+
+该命令会：
+- 清空所有菜单数据（包括菜单表和关联表）
+- 重新运行 MenuSeeder 填充默认菜单
+- 自动清理菜单缓存
+
+> **注意**：此操作会删除所有现有菜单数据，请谨慎使用。通常在开发环境更新菜单结构时使用。
+
 #### 卸载扩展包
 
 安全卸载 Laravel IAM（详见 [卸载](#卸载) 章节）：

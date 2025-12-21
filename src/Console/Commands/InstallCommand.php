@@ -147,6 +147,7 @@ class InstallCommand extends Command
         $this->line('  • iam:install          - 安装扩展包');
         $this->line('  • iam:sync-permissions - 同步路由权限');
         $this->line('  • iam:menus:export     - 导出菜单数据');
+        $this->line('  • iam:menu:reseed      - 重置菜单数据');
         $this->line('  • iam:uninstall        - 卸载扩展包');
         $this->newLine();
     }

@@ -48,6 +48,7 @@ class IamServiceProvider extends ServiceProvider
                 Console\Commands\ExportMenusCommand::class,
                 Console\Commands\SyncPermissionsCommand::class,
                 Console\Commands\UninstallCommand::class,
+                Console\Commands\MenuReseedCommand::class,
             ]);
         }
     }
