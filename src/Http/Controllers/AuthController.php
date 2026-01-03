@@ -18,7 +18,7 @@ class AuthController extends Controller
         $credentials = $request->validated();
 
         $payload = $this->authService->attemptLogin(
-            $credentials['account'],
+            $credentials['account'] ?? $credentials['username'],
             $credentials['password'],
             $request->ip()
         );

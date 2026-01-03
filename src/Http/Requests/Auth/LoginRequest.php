@@ -14,7 +14,8 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'account' => ['required', 'string'],
+            'account' => ['required_without:username', 'string'],
+            'username' => ['required_without:account', 'string'],
             'password' => ['required', 'string', 'min:6'],
         ];
     }
@@ -23,6 +24,7 @@ class LoginRequest extends FormRequest
     {
         return [
             'account' => '登录账号',
+            'username' => '用户名',
             'password' => '密码',
         ];
     }
