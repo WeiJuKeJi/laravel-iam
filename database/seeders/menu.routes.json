@@ -1,18 +1,18 @@
 [
   {
-    "name": "系统管理",
-    "path": "/system",
+    "name": "System",
+    "path": "/iam",
     "component": "Layout",
-    "redirect": "/system/users",
+    "redirect": "/iam/user",
     "meta": {
       "title": "系统管理",
       "icon": "setting"
     },
     "children": [
       {
-        "name": "用户管理",
-        "path": "users",
-        "component": "system/users/index",
+        "name": "User",
+        "path": "user",
+        "component": "iam/user/index",
         "meta": {
           "title": "用户管理",
           "icon": "user",
@@ -20,9 +20,9 @@
         }
       },
       {
-        "name": "角色管理",
-        "path": "roles",
-        "component": "system/roles/index",
+        "name": "Role",
+        "path": "role",
+        "component": "iam/role/index",
         "meta": {
           "title": "角色管理",
           "icon": "peoples",
@@ -30,9 +30,9 @@
         }
       },
       {
-        "name": "权限管理",
-        "path": "permissions",
-        "component": "system/permissions/index",
+        "name": "Permission",
+        "path": "permission",
+        "component": "iam/permission/index",
         "meta": {
           "title": "权限管理",
           "icon": "lock",
@@ -40,9 +40,9 @@
         }
       },
       {
-        "name": "菜单管理",
-        "path": "menus",
-        "component": "system/menus/index",
+        "name": "Menu",
+        "path": "menu",
+        "component": "iam/menu/index",
         "meta": {
           "title": "菜单管理",
           "icon": "tree-table",

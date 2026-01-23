@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use WeiJuKeJi\LaravelIam\Database\Seeders\MenuSeeder;
 use WeiJuKeJi\LaravelIam\Services\MenuService;
+use WeiJuKeJi\LaravelIam\Support\ConfigHelper;
 
 class MenuReseedCommand extends Command
 {
@@ -52,11 +53,11 @@ class MenuReseedCommand extends Command
             DB::beginTransaction();
 
             // 清空关联表
-            DB::table('iam_menu_role')->truncate();
-            DB::table('iam_menu_permission')->truncate();
+            DB::table(ConfigHelper::table('menu_role'))->truncate();
+            DB::table(ConfigHelper::table('menu_permission'))->truncate();
 
             // 清空菜单表
-            DB::table('iam_menus')->truncate();
+            DB::table(ConfigHelper::table('menus'))->truncate();
 
             DB::commit();
 
@@ -101,7 +102,7 @@ class MenuReseedCommand extends Command
         $this->info('══════════════════════════════════════════');
         $this->newLine();
 
-        $menuCount = DB::table('iam_menus')->count();
+        $menuCount = DB::table(ConfigHelper::table('menus'))->count();
         $this->line("  <fg=cyan>菜单总数:</> {$menuCount}");
         $this->newLine();
     }

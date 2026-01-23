@@ -28,7 +28,7 @@ return new class extends Migration
             }
 
             if (! Schema::hasColumn('users', 'last_login_at')) {
-                $table->timestampTz('last_login_at')->nullable()->after('metadata');
+                $table->timestamp('last_login_at')->nullable()->after('metadata');
             }
 
             if (! Schema::hasColumn('users', 'last_login_ip')) {
@@ -40,7 +40,7 @@ return new class extends Migration
             }
 
             if (! Schema::hasColumn('users', 'deleted_at')) {
-                $table->softDeletesTz();
+                $table->softDeletes();
             }
         });
 
@@ -83,11 +83,34 @@ return new class extends Migration
         Schema::table('users', function (Blueprint $table) {
             $table->string('username', 60)->nullable(false)->unique()->change();
         });
+
+        // 第五步：添加索引，提升查询性能
+        Schema::table('users', function (Blueprint $table) {
+            // status 字段经常用于筛选
+            if (Schema::hasColumn('users', 'status')) {
+                $table->index('status', 'users_status_index');
+            }
+
+            // last_login_at 用于排序和筛选
+            if (Schema::hasColumn('users', 'last_login_at')) {
+                $table->index('last_login_at', 'users_last_login_at_index');
+            }
+        });
     }
 
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
+            // 删除索引
+            if (Schema::hasColumn('users', 'status')) {
+                $table->dropIndex('users_status_index');
+            }
+
+            if (Schema::hasColumn('users', 'last_login_at')) {
+                $table->dropIndex('users_last_login_at_index');
+            }
+
+            // 删除字段
             if (Schema::hasColumn('users', 'username')) {
                 $table->dropColumn('username');
             }

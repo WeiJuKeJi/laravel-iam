@@ -92,7 +92,7 @@ class AuthService
     protected function formatTokenPayload(NewAccessToken $token): array
     {
         $expiration = config('sanctum.expiration');
-        $expiresAt = $expiration ? now()->addMinutes($expiration)->toISOString() : null;
+        $expiresAt = $expiration ? now()->addMinutes($expiration)->toDateTimeString() : null;
 
         $payload = [
             'token' => $token->plainTextToken,

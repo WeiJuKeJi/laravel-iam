@@ -4,6 +4,7 @@ namespace WeiJuKeJi\LaravelIam\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
+use WeiJuKeJi\LaravelIam\Support\ConfigHelper;
 
 class UninstallCommand extends Command
 {
@@ -59,14 +60,12 @@ class UninstallCommand extends Command
             $this->newLine();
             $this->warn('⚠️  数据库表提示:');
             $this->line('  以下表由 IAM 创建，如需删除请手动执行回滚:');
-            $this->line('  - iam_menus');
-            $this->line('  - iam_menu_role');
-            $this->line('  - iam_menu_permission');
-            $this->line('  - iam_permissions');
-            $this->line('  - iam_roles');
-            $this->line('  - iam_model_has_permissions');
-            $this->line('  - iam_model_has_roles');
-            $this->line('  - iam_role_has_permissions');
+
+            $tables = ConfigHelper::getTables();
+            foreach ($tables as $table) {
+                $this->line("  - {$table}");
+            }
+
             $this->newLine();
             $this->line('  回滚命令: php artisan migrate:rollback --path=vendor/weijukeji/laravel-iam/database/migrations');
         }

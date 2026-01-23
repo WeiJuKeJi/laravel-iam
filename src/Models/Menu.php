@@ -12,12 +12,20 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Arr;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use WeiJuKeJi\LaravelIam\Support\ConfigHelper;
 
 class Menu extends Model
 {
     use HasFactory, Filterable;
 
-    protected $table = 'iam_menus';
+    /**
+     * 构造函数，动态设置表名
+     */
+    public function __construct(array $attributes = [])
+    {
+        $this->table = ConfigHelper::table('menus');
+        parent::__construct($attributes);
+    }
 
     protected static function booted(): void
     {
@@ -72,12 +80,12 @@ class Menu extends Model
 
     public function roles(): BelongsToMany
     {
-        return $this->belongsToMany(Role::class, 'iam_menu_role')->withTimestamps();
+        return $this->belongsToMany(Role::class, ConfigHelper::table('menu_role'))->withTimestamps();
     }
 
     public function permissions(): BelongsToMany
     {
-        return $this->belongsToMany(Permission::class, 'iam_menu_permission')->withTimestamps();
+        return $this->belongsToMany(Permission::class, ConfigHelper::table('menu_permission'))->withTimestamps();
     }
 
     /**

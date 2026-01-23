@@ -86,6 +86,9 @@ php artisan vendor:publish --tag=iam-views
 
 ```php
 return [
+    // 数据表前缀
+    'table_prefix' => 'iam_',
+
     // 认证守卫
     'guard' => 'sanctum',
 
@@ -114,6 +117,52 @@ return [
         'super-admin',
     ],
 ];
+```
+
+### 配置说明
+
+#### 数据表前缀 (`table_prefix`)
+
+定义 IAM 扩展包所有数据表的前缀，默认为 `iam_`。
+
+**影响的表**：
+- `{prefix}permissions` - 权限表
+- `{prefix}roles` - 角色表
+- `{prefix}model_has_permissions` - 用户权限关联表
+- `{prefix}model_has_roles` - 用户角色关联表
+- `{prefix}role_has_permissions` - 角色权限关联表
+- `{prefix}menus` - 菜单表
+- `{prefix}menu_role` - 菜单角色关联表
+- `{prefix}menu_permission` - 菜单权限关联表
+
+**使用场景**：
+- 避免与其他扩展包的表名冲突
+- 符合项目的数据库命名规范
+- 多租户应用中的表隔离
+
+**修改方法**：
+```php
+'table_prefix' => 'app_',  // 表名将变为 app_permissions, app_roles 等
+```
+
+**⚠️ 重要提示**：
+- **建议在安装前配置前缀**：在运行 `php artisan iam:install` 之前，先修改 `config/iam.php` 中的 `table_prefix`
+- **迁移文件已支持动态前缀**：所有迁移文件都会读取配置文件中的前缀，自动创建对应的表名
+- **已安装的项目**：如果已经运行过迁移，修改前缀后需要回滚并重新运行迁移，或手动调整数据库表名
+
+**安装流程示例**（使用自定义前缀）：
+```bash
+# 1. 安装扩展包
+composer require weijukeji/laravel-iam
+
+# 2. 发布配置文件
+php artisan vendor:publish --tag=iam-config
+
+# 3. 修改配置文件中的 table_prefix
+# 编辑 config/iam.php，将 'table_prefix' => 'iam_' 改为你想要的前缀
+
+# 4. 运行安装命令
+php artisan iam:install --seed
 ```
 
 ## 缓存配置
@@ -383,6 +432,16 @@ $menuService->flushCache();
 - [前端路由指南](docs/menu-routing.md)
 - [RBAC 前端集成](docs/rbac-frontend-guide.md)
 - [菜单前端指南](docs/menu-frontend-guide.md)
+
+## 用户模型扩展
+
+如果你的项目需要为用户添加自定义字段（如销售渠道、商户 ID 等），请查看：
+- [用户模型扩展指南](docs/user-extension-guide.md)
+
+该指南介绍了三种扩展方式：
+1. **使用 metadata 字段** - 适合简单场景，无需修改表结构
+2. **继承 User 模型** - 适合需要类型安全和数据库索引的场景
+3. **创建关联表** - 适合大量扩展字段的场景
 
 ## 安全特性
 

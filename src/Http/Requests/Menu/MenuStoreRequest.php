@@ -4,6 +4,7 @@ namespace WeiJuKeJi\LaravelIam\Http\Requests\Menu;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use WeiJuKeJi\LaravelIam\Support\ConfigHelper;
 
 class MenuStoreRequest extends FormRequest
 {
@@ -23,8 +24,8 @@ class MenuStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'parent_id' => ['nullable', 'integer', 'exists:iam_menus,id'],
-            'name' => ['required', 'string', 'max:64', Rule::unique('iam_menus', 'name')],
+            'parent_id' => ['nullable', 'integer', 'exists:' . ConfigHelper::table('menus') . ',id'],
+            'name' => ['required', 'string', 'max:64', Rule::unique(ConfigHelper::table('menus'), 'name')],
             'path' => ['required', 'string', 'max:255'],
             'component' => ['nullable', 'string', 'max:255'],
             'redirect' => ['nullable', 'string', 'max:255'],
@@ -33,9 +34,9 @@ class MenuStoreRequest extends FormRequest
             'meta' => ['nullable', 'array'],
             'guard' => ['nullable', 'array'],
             'role_ids' => ['array'],
-            'role_ids.*' => ['integer', 'exists:iam_roles,id'],
+            'role_ids.*' => ['integer', 'exists:' . ConfigHelper::table('roles') . ',id'],
             'permission_ids' => ['array'],
-            'permission_ids.*' => ['integer', 'exists:iam_permissions,id'],
+            'permission_ids.*' => ['integer', 'exists:' . ConfigHelper::table('permissions') . ',id'],
         ];
     }
 

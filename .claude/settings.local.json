@@ -3,7 +3,16 @@
     "allow": [
       "mcp__mcp-router__list_directory",
       "mcp__mcp-router__read_file",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: 添加安全卸载命令 iam:uninstall\n\n- 新增 UninstallCommand 用于安全卸载扩展包\n- 自动清理应用缓存和 bootstrap 缓存\n- 清理 IAM 菜单缓存\n- 提供 --force 和 --keep-tables 选项\n- 更新 README 添加完整卸载文档\n\n解决 composer remove 时因 Laravel pre-package-uninstall 钩子\n导致的 Class not found 错误\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(git tag:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: 添加 Laravel 12 支持\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit:*)",
+      "Bash(php -l:*)",
+      "Bash(composer dump-autoload:*)",
+      "Bash(php artisan tinker:*)"
     ],
     "deny": [],
     "ask": []

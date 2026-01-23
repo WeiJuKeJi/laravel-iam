@@ -15,8 +15,8 @@ class PermissionResource extends JsonResource
             'group' => $this->group,
             'guard_name' => $this->guard_name,
             'metadata' => $this->metadata,
-            'created_at' => $this->created_at?->toISOString(),
-            'updated_at' => $this->updated_at?->toISOString(),
+            'created_at' => $this->created_at?->toDateTimeString(),
+            'updated_at' => $this->updated_at?->toDateTimeString(),
         ];
     }
 }

@@ -4,6 +4,7 @@ namespace WeiJuKeJi\LaravelIam\Http\Requests\Menu;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use WeiJuKeJi\LaravelIam\Support\ConfigHelper;
 
 class MenuUpdateRequest extends FormRequest
 {
@@ -24,7 +25,7 @@ class MenuUpdateRequest extends FormRequest
     {
         $menuId = $this->route('menu')?->id;
 
-        $parentRules = ['nullable', 'integer', 'exists:iam_menus,id'];
+        $parentRules = ['nullable', 'integer', 'exists:' . ConfigHelper::table('menus') . ',id'];
 
         if ($menuId) {
             $parentRules[] = Rule::notIn([$menuId]);
@@ -32,7 +33,7 @@ class MenuUpdateRequest extends FormRequest
 
         return [
             'parent_id' => $parentRules,
-            'name' => ['required', 'string', 'max:64', Rule::unique('iam_menus', 'name')->ignore($menuId)],
+            'name' => ['required', 'string', 'max:64', Rule::unique(ConfigHelper::table('menus'), 'name')->ignore($menuId)],
             'path' => ['required', 'string', 'max:255'],
             'component' => ['nullable', 'string', 'max:255'],
             'redirect' => ['nullable', 'string', 'max:255'],
@@ -41,9 +42,9 @@ class MenuUpdateRequest extends FormRequest
             'meta' => ['nullable', 'array'],
             'guard' => ['nullable', 'array'],
             'role_ids' => ['array'],
-            'role_ids.*' => ['integer', 'exists:iam_roles,id'],
+            'role_ids.*' => ['integer', 'exists:' . ConfigHelper::table('roles') . ',id'],
             'permission_ids' => ['array'],
-            'permission_ids.*' => ['integer', 'exists:iam_permissions,id'],
+            'permission_ids.*' => ['integer', 'exists:' . ConfigHelper::table('permissions') . ',id'],
         ];
     }
 

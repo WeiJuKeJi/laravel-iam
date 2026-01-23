@@ -11,6 +11,9 @@ class IamServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // 配置 Spatie Permission 使用自定义表名和模型
+        $this->configurePermissions();
+
         // 加载路由
         $this->loadRoutesFrom(__DIR__.'/../routes/api.php');
         $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
@@ -63,6 +66,54 @@ class IamServiceProvider extends ServiceProvider
             __DIR__.'/../config/iam.php',
             'iam'
         );
+
+        // 注册模型绑定
+        $this->registerModelBindings();
+    }
+
+    /**
+     * 注册模型绑定，允许项目使用自定义模型
+     */
+    protected function registerModelBindings(): void
+    {
+        $config = $this->app->config['iam.models'] ?? [];
+
+        if (!empty($config['user'])) {
+            $this->app->bind(
+                \WeiJuKeJi\LaravelIam\Models\User::class,
+                $config['user']
+            );
+        }
+
+        if (!empty($config['menu'])) {
+            $this->app->bind(
+                \WeiJuKeJi\LaravelIam\Models\Menu::class,
+                $config['menu']
+            );
+        }
+    }
+
+    /**
+     * 配置 Spatie Permission 使用自定义表名和模型
+     */
+    protected function configurePermissions(): void
+    {
+        $tables = \WeiJuKeJi\LaravelIam\Support\ConfigHelper::getTables();
+
+        // 配置自定义的表名
+        config([
+            'permission.table_names' => [
+                'roles' => $tables['roles'],
+                'permissions' => $tables['permissions'],
+                'model_has_permissions' => $tables['model_has_permissions'],
+                'model_has_roles' => $tables['model_has_roles'],
+                'role_has_permissions' => $tables['role_has_permissions'],
+            ],
+            'permission.models' => [
+                'permission' => \WeiJuKeJi\LaravelIam\Models\Permission::class,
+                'role' => \WeiJuKeJi\LaravelIam\Models\Role::class,
+            ],
+        ]);
     }
 
     /**
