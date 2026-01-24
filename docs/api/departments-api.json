@@ -1,0 +1,574 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "部门管理 API",
+    "description": "部门管理相关接口，基于 Nested Set 模型实现无限层级的部门树，支持部门的创建、查询、更新、删除、移动等功能",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/iam/departments": {
+      "get": {
+        "tags": ["Iam/Department"],
+        "summary": "获取部门列表（平铺）",
+        "description": "分页获取部门列表（平铺结构），支持按状态、名称等条件筛选\n\n**测试用例：**\n1. 默认分页查询（page=1, per_page=20）\n2. 按状态筛选（filter[status]=active）\n3. 按名称搜索（filter[name]=技术部）\n4. 排序查询（sort_by=sort_order&sort_order=asc）",
+        "operationId": "getDepartments",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "filter[status]", "in": "query", "description": "状态筛选", "schema": { "type": "string", "enum": ["active", "inactive"] } },
+          { "name": "filter[name]", "in": "query", "description": "部门名称筛选", "schema": { "type": "string" } },
+          { "name": "sort_by", "in": "query", "description": "排序字段", "schema": { "type": "string", "enum": ["sort_order", "created_at", "name"], "default": "sort_order" } },
+          { "name": "sort_order", "in": "query", "description": "排序方向", "schema": { "type": "string", "enum": ["asc", "desc"], "default": "asc" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "per_page", "in": "query", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": [
+                    {
+                      "id": 1,
+                      "parent_id": null,
+                      "name": "总公司",
+                      "code": "COMPANY",
+                      "manager_id": 1,
+                      "manager": {
+                        "id": 1,
+                        "name": "张三",
+                        "username": "zhangsan"
+                      },
+                      "sort_order": 0,
+                      "status": "active",
+                      "description": "公司总部",
+                      "metadata": {},
+                      "full_path": "总公司",
+                      "level": 0,
+                      "is_leaf": false,
+                      "created_at": "2024-01-23 10:00:00",
+                      "updated_at": "2024-01-23 10:00:00"
+                    }
+                  ],
+                  "meta": {
+                    "current_page": 1,
+                    "last_page": 2,
+                    "per_page": 20,
+                    "total": 35
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Iam/Department"],
+        "summary": "创建部门",
+        "description": "创建新部门，可指定父部门、部门负责人等\n\n**测试用例：**\n1. 创建根部门（无parent_id）\n2. 创建子部门（指定parent_id）\n3. 创建带负责人的部门（指定manager_id）",
+        "operationId": "createDepartment",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "examples": {
+                "根部门": {
+                  "summary": "创建根部门",
+                  "value": {
+                    "name": "总公司",
+                    "code": "COMPANY",
+                    "sort_order": 0,
+                    "status": "active",
+                    "description": "公司总部"
+                  }
+                },
+                "子部门": {
+                  "summary": "创建子部门",
+                  "value": {
+                    "parent_id": 1,
+                    "name": "市场部",
+                    "code": "MARKET",
+                    "manager_id": 5,
+                    "sort_order": 4,
+                    "status": "active",
+                    "description": "市场营销部门",
+                    "metadata": {
+                      "budget": 1000000,
+                      "location": "北京"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "创建成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 201,
+                  "msg": "部门创建成功",
+                  "data": {
+                    "id": 2,
+                    "parent_id": 1,
+                    "name": "市场部",
+                    "code": "MARKET",
+                    "manager_id": 5,
+                    "sort_order": 4,
+                    "status": "active",
+                    "description": "市场营销部门",
+                    "metadata": {
+                      "budget": 1000000,
+                      "location": "北京"
+                    },
+                    "full_path": "总公司 / 市场部",
+                    "level": 1,
+                    "is_leaf": true,
+                    "created_at": "2024-01-23 10:00:00",
+                    "updated_at": "2024-01-23 10:00:00"
+                  }
+                }
+              }
+            }
+          },
+          "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/iam/departments/tree": {
+      "get": {
+        "tags": ["Iam/Department"],
+        "summary": "获取部门树形结构",
+        "description": "获取完整的部门树形结构，支持筛选和只获取启用的部门\n\n**测试用例：**\n1. 获取全部部门树\n2. 只获取启用的部门树（active_only=1）\n3. 按名称筛选（name=技术部）\n4. 按状态筛选（status=active）",
+        "operationId": "getDepartmentTree",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "name", "in": "query", "description": "部门名称筛选", "schema": { "type": "string" } },
+          { "name": "code", "in": "query", "description": "部门编码筛选", "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "description": "状态筛选", "schema": { "type": "string", "enum": ["active", "inactive"] } },
+          { "name": "manager_id", "in": "query", "description": "负责人筛选", "schema": { "type": "integer" } },
+          { "name": "parent_id", "in": "query", "description": "父部门筛选", "schema": { "type": "integer" } },
+          { "name": "active_only", "in": "query", "description": "是否只获取启用的部门", "schema": { "type": "boolean", "default": false } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 200,
+                  "msg": "success",
+                  "data": {
+                    "list": [
+                      {
+                        "id": 1,
+                        "name": "总公司",
+                        "code": "COMPANY",
+                        "manager_id": 1,
+                        "manager": {
+                          "id": 1,
+                          "name": "张三"
+                        },
+                        "sort_order": 0,
+                        "status": "active",
+                        "description": "公司总部",
+                        "metadata": {},
+                        "level": 0,
+                        "is_leaf": false,
+                        "children": [
+                          {
+                            "id": 2,
+                            "name": "技术部",
+                            "code": "TECH",
+                            "sort_order": 1,
+                            "status": "active",
+                            "level": 1,
+                            "is_leaf": false,
+                            "children": [
+                              {
+                                "id": 3,
+                                "name": "研发中心",
+                                "code": "TECH-DEV",
+                                "sort_order": 1,
+                                "status": "active",
+                                "level": 2,
+                                "is_leaf": true,
+                                "children": []
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ],
+                    "total": 1
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/iam/departments/{id}": {
+      "get": {
+        "tags": ["Iam/Department"],
+        "summary": "查看部门详情",
+        "description": "查看指定部门的详细信息，支持按需加载关联数据",
+        "operationId": "getDepartment",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "with_ancestors", "in": "query", "description": "是否加载祖先部门", "schema": { "type": "boolean", "default": false } },
+          { "name": "with_descendants", "in": "query", "description": "是否加载后代部门", "schema": { "type": "boolean", "default": false } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "基础信息": {
+                    "summary": "不加载关联",
+                    "value": {
+                      "code": 200,
+                      "msg": "success",
+                      "data": {
+                        "id": 2,
+                        "parent_id": 1,
+                        "name": "技术部",
+                        "code": "TECH",
+                        "manager_id": 3,
+                        "manager": {
+                          "id": 3,
+                          "name": "李四",
+                          "username": "lisi"
+                        },
+                        "sort_order": 1,
+                        "status": "active",
+                        "description": "技术研发部门",
+                        "metadata": {},
+                        "full_path": "总公司 / 技术部",
+                        "level": 1,
+                        "is_leaf": false,
+                        "created_at": "2024-01-23 10:00:00",
+                        "updated_at": "2024-01-23 10:00:00"
+                      }
+                    }
+                  },
+                  "加载祖先": {
+                    "summary": "with_ancestors=1",
+                    "value": {
+                      "code": 200,
+                      "msg": "success",
+                      "data": {
+                        "id": 3,
+                        "name": "研发中心",
+                        "code": "TECH-DEV",
+                        "ancestors": [
+                          {
+                            "id": 1,
+                            "name": "总公司",
+                            "code": "COMPANY",
+                            "level": 0
+                          },
+                          {
+                            "id": 2,
+                            "name": "技术部",
+                            "code": "TECH",
+                            "level": 1
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "加载后代": {
+                    "summary": "with_descendants=1",
+                    "value": {
+                      "code": 200,
+                      "msg": "success",
+                      "data": {
+                        "id": 2,
+                        "name": "技术部",
+                        "code": "TECH",
+                        "descendants": [
+                          {
+                            "id": 3,
+                            "name": "研发中心",
+                            "code": "TECH-DEV",
+                            "level": 2
+                          },
+                          {
+                            "id": 4,
+                            "name": "测试中心",
+                            "code": "TECH-QA",
+                            "level": 2
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Iam/Department"],
+        "summary": "更新部门",
+        "description": "更新部门信息，所有字段均为可选\n\n**测试用例：**\n1. 更新基本信息（名称、描述）\n2. 更换部门负责人\n3. 停用部门",
+        "operationId": "updateDepartment",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "examples": {
+                "更新基本信息": {
+                  "summary": "更新名称和描述",
+                  "value": {
+                    "name": "技术研发部",
+                    "description": "负责产品研发和技术创新"
+                  }
+                },
+                "更换负责人": {
+                  "summary": "更换部门负责人",
+                  "value": {
+                    "manager_id": 8
+                  }
+                },
+                "停用部门": {
+                  "summary": "停用部门",
+                  "value": {
+                    "status": "inactive"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 200,
+                  "msg": "部门更新成功",
+                  "data": {
+                    "id": 2,
+                    "parent_id": 1,
+                    "name": "技术研发部",
+                    "code": "TECH",
+                    "manager_id": 8,
+                    "sort_order": 1,
+                    "status": "active",
+                    "description": "负责产品研发和技术创新",
+                    "metadata": {},
+                    "full_path": "总公司 / 技术研发部",
+                    "level": 1,
+                    "is_leaf": false,
+                    "created_at": "2024-01-23 10:00:00",
+                    "updated_at": "2024-01-23 11:30:00"
+                  }
+                }
+              }
+            }
+          },
+          "422": { "$ref": "#/components/responses/ValidationError" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Iam/Department"],
+        "summary": "删除部门",
+        "description": "删除指定部门。注意：\n- 有子部门的部门无法删除\n- 有员工的部门无法删除",
+        "operationId": "deleteDepartment",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "删除成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 200,
+                  "msg": "部门删除成功",
+                  "data": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "业务错误",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "有子部门": {
+                    "summary": "部门有子部门",
+                    "value": {
+                      "code": 400,
+                      "msg": "该部门下有子部门，无法删除",
+                      "data": null
+                    }
+                  },
+                  "有员工": {
+                    "summary": "部门有员工",
+                    "value": {
+                      "code": 400,
+                      "msg": "该部门下有员工，无法删除",
+                      "data": null
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/iam/departments/{id}/move": {
+      "post": {
+        "tags": ["Iam/Department"],
+        "summary": "移动部门位置",
+        "description": "移动部门到新位置，支持拖拽排序\n\n**测试用例：**\n1. 移动到某个部门之前（position=before）\n2. 移动到某个部门之后（position=after）\n3. 移动到某个部门内部作为子部门（position=inside）",
+        "operationId": "moveDepartment",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "要移动的部门ID" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "examples": {
+                "移动到前面": {
+                  "summary": "移动到某部门之前",
+                  "value": {
+                    "position": "before",
+                    "target_id": 4
+                  }
+                },
+                "移动到后面": {
+                  "summary": "移动到某部门之后",
+                  "value": {
+                    "position": "after",
+                    "target_id": 4
+                  }
+                },
+                "移动到内部": {
+                  "summary": "移动到某部门内部作为子部门",
+                  "value": {
+                    "position": "inside",
+                    "parent_id": 2
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "移动成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 200,
+                  "msg": "部门移动成功",
+                  "data": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "业务错误",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 400,
+                  "msg": "不能将部门移动到其子部门下",
+                  "data": null
+                }
+              }
+            }
+          },
+          "422": { "$ref": "#/components/responses/ValidationError" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Token"
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "未授权",
+        "content": {
+          "application/json": {
+            "example": {
+              "code": 401,
+              "msg": "未授权访问",
+              "data": null
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "资源不存在",
+        "content": {
+          "application/json": {
+            "example": {
+              "code": 404,
+              "msg": "部门不存在",
+              "data": null
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "数据校验失败",
+        "content": {
+          "application/json": {
+            "example": {
+              "code": 422,
+              "msg": "数据校验失败",
+              "data": {
+                "errors": {
+                  "name": ["部门名称不能为空"],
+                  "code": ["部门编码已存在"]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

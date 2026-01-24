@@ -30,7 +30,9 @@ class User extends Authenticatable
         'username',
         'password',
         'status',
+        'user_type',
         'phone',
+        'department_id',
         'metadata',
         'last_login_at',
         'last_login_ip',
@@ -49,6 +51,7 @@ class User extends Authenticatable
 
     protected $attributes = [
         'status' => 'active',
+        'user_type' => 'default',
     ];
 
     public function modelFilter()
@@ -68,5 +71,38 @@ class User extends Authenticatable
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
+    }
+
+    /**
+     * 查询指定类型的用户
+     */
+    public function scopeOfType($query, string $type)
+    {
+        return $query->where('user_type', $type);
+    }
+
+    /**
+     * 检查用户是否为指定类型
+     */
+    public function isType(string $type): bool
+    {
+        return $this->user_type === $type;
+    }
+
+    /**
+     * 获取用户类型的显示名称
+     */
+    public function getUserTypeNameAttribute(): ?string
+    {
+        $types = config('iam.user_types', []);
+        return $types[$this->user_type] ?? $this->user_type;
+    }
+
+    /**
+     * 所属部门
+     */
+    public function department()
+    {
+        return $this->belongsTo(Department::class, 'department_id');
     }
 }

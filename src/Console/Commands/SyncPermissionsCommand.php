@@ -12,15 +12,22 @@ use WeiJuKeJi\LaravelIam\Models\Role;
 
 class SyncPermissionsCommand extends Command
 {
-    protected $signature = 'iam:sync-permissions {--dry-run : 仅展示将要同步的权限，不写入数据库}';
+    protected $signature = 'iam:sync-permissions
+                            {--prefix=* : 指定要同步的路由前缀，可多次使用。不指定则使用配置文件中的默认值}
+                            {--all : 同步所有符合条件的路由，忽略前缀限制}
+                            {--dry-run : 仅展示将要同步的权限，不写入数据库}';
 
     protected $description = '根据命名规范从路由集中生成并同步权限';
 
     public function handle(Router $router): int
     {
-        $config = config('iam.permissions');
+        $config = config('iam') ?? [];
 
-        $routePrefixes = $config['route_prefixes'] ?? ['iam'];
+        $syncAll = $this->option('all');
+
+        // 优先使用命令行传入的前缀，否则使用配置文件
+        $routePrefixes = $syncAll ? [] : ($this->option('prefix') ?: ($config['route_prefixes'] ?? ['iam']));
+
         $ignoreRoutes = $config['ignore_routes'] ?? [];
         $actionMap = $config['action_map'] ?? [];
         $actionLabels = $config['action_labels'] ?? [];
@@ -28,6 +35,15 @@ class SyncPermissionsCommand extends Command
         $guard = $config['guard'] ?? 'sanctum';
 
         $dryRun = (bool) $this->option('dry-run');
+
+        // 显示正在扫描的前缀
+        if (!$dryRun) {
+            if ($syncAll) {
+                $this->info('扫描模式：同步所有路由（不限前缀）');
+            } else {
+                $this->info('扫描路由前缀：' . implode(', ', $routePrefixes));
+            }
+        }
 
         $permissionCandidates = [];
 
@@ -50,7 +66,13 @@ class SyncPermissionsCommand extends Command
                 $module = array_shift($segments);
             }
 
-            if (! in_array($module, $routePrefixes, true) || empty($segments)) {
+            // 如果不是同步所有，则检查前缀
+            if (!$syncAll && (! in_array($module, $routePrefixes, true) || empty($segments))) {
+                continue;
+            }
+
+            // 同步所有模式下，仍需要有资源和动作
+            if ($syncAll && empty($segments)) {
                 continue;
             }
 

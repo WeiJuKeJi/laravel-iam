@@ -4,13 +4,16 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use WeiJuKeJi\LaravelIam\Support\ConfigHelper;
 
 return new class extends Migration
 {
     public function up(): void
     {
+        $departments = ConfigHelper::table('departments');
+
         // 第一步：添加字段（username 先设为 nullable）
-        Schema::table('users', function (Blueprint $table) {
+        Schema::table('users', function (Blueprint $table) use ($departments) {
             if (! Schema::hasColumn('users', 'username')) {
                 $table->string('username', 60)->nullable()->after('email');
             }
@@ -23,12 +26,25 @@ return new class extends Migration
                 $table->string('phone', 30)->nullable()->after('status');
             }
 
+            if (! Schema::hasColumn('users', 'user_type')) {
+                $table->string('user_type', 32)->default('internal')->after('phone')->comment('用户类型');
+            }
+
             if (! Schema::hasColumn('users', 'metadata')) {
-                $table->jsonb('metadata')->nullable()->after('phone')->comment('扩展配置');
+                $table->jsonb('metadata')->nullable()->after('user_type')->comment('扩展配置');
+            }
+
+            if (! Schema::hasColumn('users', 'department_id')) {
+                $table->foreignId('department_id')
+                    ->nullable()
+                    ->after('metadata')
+                    ->constrained($departments)
+                    ->nullOnDelete()
+                    ->comment('所属部门');
             }
 
             if (! Schema::hasColumn('users', 'last_login_at')) {
-                $table->timestamp('last_login_at')->nullable()->after('metadata');
+                $table->timestamp('last_login_at')->nullable()->after('department_id');
             }
 
             if (! Schema::hasColumn('users', 'last_login_ip')) {
@@ -91,6 +107,16 @@ return new class extends Migration
                 $table->index('status', 'users_status_index');
             }
 
+            // user_type 用于用户类型筛选
+            if (Schema::hasColumn('users', 'user_type')) {
+                $table->index('user_type', 'users_user_type_index');
+            }
+
+            // department_id 用于部门筛选
+            if (Schema::hasColumn('users', 'department_id')) {
+                $table->index('department_id', 'users_department_id_index');
+            }
+
             // last_login_at 用于排序和筛选
             if (Schema::hasColumn('users', 'last_login_at')) {
                 $table->index('last_login_at', 'users_last_login_at_index');
@@ -106,8 +132,22 @@ return new class extends Migration
                 $table->dropIndex('users_status_index');
             }
 
+            if (Schema::hasColumn('users', 'user_type')) {
+                $table->dropIndex('users_user_type_index');
+            }
+
+            if (Schema::hasColumn('users', 'department_id')) {
+                $table->dropIndex('users_department_id_index');
+            }
+
             if (Schema::hasColumn('users', 'last_login_at')) {
                 $table->dropIndex('users_last_login_at_index');
+            }
+
+            // 删除外键和字段
+            if (Schema::hasColumn('users', 'department_id')) {
+                $table->dropForeign(['department_id']);
+                $table->dropColumn('department_id');
             }
 
             // 删除字段
@@ -121,6 +161,10 @@ return new class extends Migration
 
             if (Schema::hasColumn('users', 'phone')) {
                 $table->dropColumn('phone');
+            }
+
+            if (Schema::hasColumn('users', 'user_type')) {
+                $table->dropColumn('user_type');
             }
 
             if (Schema::hasColumn('users', 'metadata')) {

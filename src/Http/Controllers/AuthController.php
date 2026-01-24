@@ -20,7 +20,8 @@ class AuthController extends Controller
         $payload = $this->authService->attemptLogin(
             $credentials['account'] ?? $credentials['username'],
             $credentials['password'],
-            $request->ip()
+            $request->ip(),
+            $request->userAgent()
         );
 
         return $this->success($payload, '登录成功');

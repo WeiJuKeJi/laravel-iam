@@ -10,7 +10,7 @@
       "post": {
         "tags": ["Iam/Auth"],
         "summary": "用户登录",
-        "description": "使用账号密码登录系统，账号可以是用户名或邮箱\n\n**测试用例：**\n1. 使用用户名登录\n2. 使用邮箱登录",
+        "description": "使用账号密码登录系统，账号可以是用户名、邮箱或手机号\n\n**测试用例：**\n1. 使用用户名登录\n2. 使用邮箱登录\n3. 使用手机号登录",
         "operationId": "login",
         "parameters": [
           { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" }
@@ -27,6 +27,10 @@
                 "邮箱登录": {
                   "summary": "使用邮箱登录",
                   "value": { "account": "admin@example.com", "password": "password123" }
+                },
+                "手机号登录": {
+                  "summary": "使用手机号登录",
+                  "value": { "account": "13800138000", "password": "password123" }
                 }
               }
             }

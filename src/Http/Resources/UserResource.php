@@ -15,6 +15,10 @@ class UserResource extends JsonResource
             'username' => $this->username,
             'status' => $this->status,
             'phone' => $this->phone,
+            'department_id' => $this->department_id,
+            'department' => $this->whenLoaded('department', function () {
+                return DepartmentResource::make($this->department)->toArray(request());
+            }),
             'metadata' => $this->metadata,
             'email_verified_at' => $this->email_verified_at?->toDateTimeString(),
             'last_login_at' => $this->last_login_at?->toDateTimeString(),

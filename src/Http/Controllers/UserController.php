@@ -20,7 +20,8 @@ class UserController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $params = $request->only(['status', 'keywords', 'email', 'username', 'role', 'per_page', 'page']);
+        // 只保留通用参数，user_type 是通用的，merchant_id 是业务特定的
+        $params = $request->only(['status', 'keywords', 'email', 'username', 'role', 'department_id', 'user_type', 'per_page', 'page']);
         $perPage = $this->resolvePerPage($params);
 
         $query = User::query()->filter($params);
@@ -31,6 +32,10 @@ class UserController extends Controller
 
         if ($request->boolean('with_permissions')) {
             $query->with('permissions');
+        }
+
+        if ($request->boolean('with_department')) {
+            $query->with('department');
         }
 
         $users = $query->orderByDesc('created_at')->paginate($perPage);
@@ -50,7 +55,7 @@ class UserController extends Controller
             $user->syncRoles($roles);
         }
 
-        $user->load(['roles.permissions', 'permissions']);
+        $user->load(['roles.permissions', 'permissions', 'department']);
 
         $payload = UserResource::make($user)->toArray($request);
 
@@ -65,6 +70,9 @@ class UserController extends Controller
         }
         if ($request->boolean('with_permissions')) {
             $relations[] = 'permissions';
+        }
+        if ($request->boolean('with_department')) {
+            $relations[] = 'department';
         }
 
         if (! empty($relations)) {
@@ -90,7 +98,7 @@ class UserController extends Controller
             $user->syncRoles($roles);
         }
 
-        $user->load(['roles.permissions', 'permissions']);
+        $user->load(['roles.permissions', 'permissions', 'department']);
 
         $payload = UserResource::make($user)->toArray($request);
 

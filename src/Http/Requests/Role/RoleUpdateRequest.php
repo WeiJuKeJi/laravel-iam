@@ -5,6 +5,7 @@ namespace WeiJuKeJi\LaravelIam\Http\Requests\Role;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use WeiJuKeJi\LaravelIam\Models\Role;
+use WeiJuKeJi\LaravelIam\Support\ConfigHelper;
 
 class RoleUpdateRequest extends FormRequest
 {
@@ -25,14 +26,14 @@ class RoleUpdateRequest extends FormRequest
                 'sometimes',
                 'string',
                 'max:120',
-                Rule::unique('roles', 'name')->where(fn ($query) => $query->where('guard_name', $guard))->ignore($roleId),
+                Rule::unique(ConfigHelper::table('roles'), 'name')->where(fn ($query) => $query->where('guard_name', $guard))->ignore($roleId),
             ],
             'display_name' => ['sometimes', 'nullable', 'string', 'max:120'],
             'group' => ['sometimes', 'nullable', 'string', 'max:120'],
             'guard_name' => ['sometimes', 'string', 'max:60'],
             'metadata' => ['sometimes', 'nullable', 'array'],
             'permissions' => ['sometimes', 'array'],
-            'permissions.*' => ['integer', 'exists:permissions,id'],
+            'permissions.*' => ['integer', 'exists:' . ConfigHelper::table('permissions') . ',id'],
         ];
     }
 

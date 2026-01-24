@@ -4,6 +4,7 @@ namespace WeiJuKeJi\LaravelIam\Http\Requests\Role;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use WeiJuKeJi\LaravelIam\Support\ConfigHelper;
 
 class RoleStoreRequest extends FormRequest
 {
@@ -21,14 +22,14 @@ class RoleStoreRequest extends FormRequest
                 'required',
                 'string',
                 'max:120',
-                Rule::unique('roles', 'name')->where(fn ($query) => $query->where('guard_name', $guard)),
+                Rule::unique(ConfigHelper::table('roles'), 'name')->where(fn ($query) => $query->where('guard_name', $guard)),
             ],
             'display_name' => ['nullable', 'string', 'max:120'],
             'group' => ['nullable', 'string', 'max:120'],
             'guard_name' => ['nullable', 'string', 'max:60'],
             'metadata' => ['nullable', 'array'],
             'permissions' => ['nullable', 'array'],
-            'permissions.*' => ['integer', 'exists:permissions,id'],
+            'permissions.*' => ['integer', 'exists:' . ConfigHelper::table('permissions') . ',id'],
         ];
     }
 

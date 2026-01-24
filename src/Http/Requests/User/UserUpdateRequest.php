@@ -5,6 +5,7 @@ namespace WeiJuKeJi\LaravelIam\Http\Requests\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use WeiJuKeJi\LaravelIam\Models\User;
+use WeiJuKeJi\LaravelIam\Support\ConfigHelper;
 
 class UserUpdateRequest extends FormRequest
 {
@@ -36,9 +37,10 @@ class UserUpdateRequest extends FormRequest
             'password' => ['sometimes', 'nullable', 'string', 'min:8'],
             'status' => ['sometimes', 'nullable', Rule::in(['active', 'inactive'])],
             'phone' => ['sometimes', 'nullable', 'string', 'max:30'],
+            'department_id' => ['sometimes', 'nullable', 'integer', 'exists:' . ConfigHelper::table('departments') . ',id'],
             'metadata' => ['sometimes', 'nullable', 'array'],
             'roles' => ['sometimes', 'array'],
-            'roles.*' => ['integer', 'exists:roles,id'],
+            'roles.*' => ['integer', 'exists:' . ConfigHelper::table('roles') . ',id'],
         ];
     }
 
@@ -51,6 +53,7 @@ class UserUpdateRequest extends FormRequest
             'password' => '密码',
             'status' => '状态',
             'phone' => '联系电话',
+            'department_id' => '所属部门',
             'metadata' => '扩展信息',
             'roles' => '角色集合',
         ];

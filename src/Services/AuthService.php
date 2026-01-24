@@ -5,6 +5,7 @@ namespace WeiJuKeJi\LaravelIam\Services;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\NewAccessToken;
+use WeiJuKeJi\LaravelIam\Models\LoginLog;
 use WeiJuKeJi\LaravelIam\Models\User;
 
 class AuthService
@@ -14,22 +15,39 @@ class AuthService
      *
      * @throws ValidationException
      */
-    public function attemptLogin(string $account, string $password, string $ip): array
+    public function attemptLogin(string $account, string $password, string $ip, ?string $userAgent = null): array
     {
         $user = User::query()
             ->where(function ($query) use ($account) {
                 $query->where('email', $account)
-                    ->orWhere('username', $account);
+                    ->orWhere('username', $account)
+                    ->orWhere('phone', $account);
             })
             ->first();
 
         if (! $user || ! Hash::check($password, $user->password)) {
+            // 记录失败日志
+            LoginLog::recordFailure(
+                account: $account,
+                reason: '账号或密码不正确',
+                ip: $ip,
+                userAgent: $userAgent
+            );
+
             throw ValidationException::withMessages([
                 'account' => '账号或密码不正确',
             ]);
         }
 
         if ($user->status !== 'active') {
+            // 记录失败日志
+            LoginLog::recordFailure(
+                account: $account,
+                reason: '账号已被禁用',
+                ip: $ip,
+                userAgent: $userAgent
+            );
+
             throw ValidationException::withMessages([
                 'account' => '账号已被禁用，请联系管理员。',
             ]);
@@ -39,6 +57,14 @@ class AuthService
             'last_login_at' => now(),
             'last_login_ip' => $ip,
         ])->save();
+
+        // 记录成功日志
+        LoginLog::recordSuccess(
+            user: $user,
+            account: $account,
+            ip: $ip,
+            userAgent: $userAgent
+        );
 
         $token = $user->createToken('admin-access', ['*']);
 

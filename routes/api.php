@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use WeiJuKeJi\LaravelIam\Http\Controllers\AuthController;
+use WeiJuKeJi\LaravelIam\Http\Controllers\DepartmentController;
+use WeiJuKeJi\LaravelIam\Http\Controllers\LoginLogController;
 use WeiJuKeJi\LaravelIam\Http\Controllers\MenuController;
 use WeiJuKeJi\LaravelIam\Http\Controllers\MenuAdminController;
 use WeiJuKeJi\LaravelIam\Http\Controllers\PermissionController;
@@ -27,8 +29,23 @@ Route::middleware(['api'])
                 'index', 'store', 'show', 'update', 'destroy',
             ]);
 
-            Route::apiResource('users', UserController::class);
+            // 用户管理路由 - 可通过配置禁用
+            $disabledRoutes = config('iam.disabled_routes', []);
+            if (!in_array('users', $disabledRoutes)) {
+                Route::apiResource('users', UserController::class);
+            }
+
             Route::apiResource('roles', RoleController::class);
             Route::apiResource('permissions', PermissionController::class);
+
+            // 部门管理
+            Route::get('departments/tree', [DepartmentController::class, 'tree'])->name('departments.tree');
+            Route::post('departments/{department}/move', [DepartmentController::class, 'move'])->name('departments.move');
+            Route::apiResource('departments', DepartmentController::class);
+
+            // 登录日志
+            Route::get('login-logs/my', [LoginLogController::class, 'myLogs'])->name('login-logs.my');
+            Route::apiResource('login-logs', LoginLogController::class)->only(['index', 'show']);
         });
     });
+

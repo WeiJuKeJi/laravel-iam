@@ -4,6 +4,7 @@ namespace WeiJuKeJi\LaravelIam\Http\Requests\User;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use WeiJuKeJi\LaravelIam\Support\ConfigHelper;
 
 class UserStoreRequest extends FormRequest
 {
@@ -31,9 +32,10 @@ class UserStoreRequest extends FormRequest
             'password' => ['required', 'string', 'min:8'],
             'status' => ['nullable', Rule::in(['active', 'inactive'])],
             'phone' => ['nullable', 'string', 'max:30'],
+            'department_id' => ['nullable', 'integer', 'exists:' . ConfigHelper::table('departments') . ',id'],
             'metadata' => ['nullable', 'array'],
             'roles' => ['nullable', 'array'],
-            'roles.*' => ['integer', 'exists:roles,id'],
+            'roles.*' => ['integer', 'exists:' . ConfigHelper::table('roles') . ',id'],
         ];
     }
 
@@ -46,6 +48,7 @@ class UserStoreRequest extends FormRequest
             'password' => '密码',
             'status' => '状态',
             'phone' => '联系电话',
+            'department_id' => '所属部门',
             'metadata' => '扩展信息',
             'roles' => '角色集合',
         ];

@@ -41,6 +41,7 @@ class ConfigHelper
             'menus' => $prefix . 'menus',
             'menu_role' => $prefix . 'menu_role',
             'menu_permission' => $prefix . 'menu_permission',
+            'departments' => $prefix . 'departments',
         ];
     }
 }

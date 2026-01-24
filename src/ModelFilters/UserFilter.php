@@ -4,6 +4,7 @@ namespace WeiJuKeJi\LaravelIam\ModelFilters;
 
 use EloquentFilter\ModelFilter;
 use Illuminate\Support\Arr;
+use WeiJuKeJi\LaravelIam\Models\Department;
 
 class UserFilter extends ModelFilter
 {
@@ -76,5 +77,35 @@ class UserFilter extends ModelFilter
                 }
             });
         });
+    }
+
+    public function department(int|string $departmentId): self
+    {
+        if (empty($departmentId)) {
+            return $this;
+        }
+
+        $department = Department::find((int) $departmentId);
+
+        if (! $department) {
+            return $this;
+        }
+
+        // 获取该部门及其所有子部门的 ID
+        $departmentIds = $department->descendants()
+            ->pluck('id')
+            ->push($department->id)
+            ->toArray();
+
+        return $this->whereIn('department_id', $departmentIds);
+    }
+
+    public function userType(string $userType): self
+    {
+        if (empty($userType)) {
+            return $this;
+        }
+
+        return $this->where('user_type', $userType);
     }
 }

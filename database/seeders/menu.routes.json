@@ -20,6 +20,16 @@
         }
       },
       {
+        "name": "LoginLog",
+        "path": "login-log",
+        "component": "iam/login-log/index",
+        "meta": {
+          "title": "登录日志",
+          "icon": "document",
+          "permissions": ["iam.login-logs.view"]
+        }
+      },
+      {
         "name": "Role",
         "path": "role",
         "component": "iam/role/index",

@@ -1,0 +1,188 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "登录日志 API",
+    "description": "登录日志管理接口，记录用户登录成功和失败的历史",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/iam/login-logs": {
+      "get": {
+        "tags": ["Iam/LoginLog"],
+        "summary": "获取登录日志列表",
+        "description": "分页获取登录日志列表，支持多条件筛选\n\n**测试用例：**\n1. 默认分页查询\n2. 按用户ID筛选\n3. 按状态筛选（成功/失败）\n4. 按IP筛选\n5. 按时间范围筛选",
+        "operationId": "getLoginLogs",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "user_id", "in": "query", "description": "用户ID", "schema": { "type": "integer" } },
+          { "name": "username", "in": "query", "description": "用户名（模糊搜索）", "schema": { "type": "string" } },
+          { "name": "account", "in": "query", "description": "登录账号（模糊搜索）", "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "description": "登录状态", "schema": { "type": "string", "enum": ["success", "failed"] } },
+          { "name": "ip", "in": "query", "description": "IP地址（模糊搜索）", "schema": { "type": "string" } },
+          { "name": "login_type", "in": "query", "description": "登录方式", "schema": { "type": "string", "enum": ["password", "sms", "oauth", "qrcode"] } },
+          { "name": "start_date", "in": "query", "description": "开始时间", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "end_date", "in": "query", "description": "结束时间", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "with_user", "in": "query", "description": "是否加载用户信息", "schema": { "type": "boolean", "default": false } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "per_page", "in": "query", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 200,
+                  "msg": "success",
+                  "data": {
+                    "list": [
+                      {
+                        "id": 1,
+                        "user_id": 1,
+                        "username": "admin",
+                        "account": "admin@scenic.local",
+                        "status": "success",
+                        "status_text": "成功",
+                        "failure_reason": null,
+                        "ip": "127.0.0.1",
+                        "user_agent": "Mozilla/5.0...",
+                        "login_type": "password",
+                        "login_type_text": "密码登录",
+                        "metadata": {},
+                        "login_at": "2026-01-24 12:30:00",
+                        "created_at": "2026-01-24 12:30:00"
+                      }
+                    ],
+                    "total": 1
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/iam/login-logs/{id}": {
+      "get": {
+        "tags": ["Iam/LoginLog"],
+        "summary": "查看登录日志详情",
+        "description": "查看指定登录日志的详细信息",
+        "operationId": "getLoginLog",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
+          { "name": "with_user", "in": "query", "description": "是否加载用户信息", "schema": { "type": "boolean", "default": false } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 200,
+                  "msg": "success",
+                  "data": {
+                    "id": 1,
+                    "user_id": 1,
+                    "username": "admin",
+                    "account": "admin@scenic.local",
+                    "status": "success",
+                    "status_text": "成功",
+                    "failure_reason": null,
+                    "ip": "127.0.0.1",
+                    "user_agent": "Mozilla/5.0...",
+                    "login_type": "password",
+                    "login_type_text": "密码登录",
+                    "metadata": {},
+                    "login_at": "2026-01-24 12:30:00",
+                    "created_at": "2026-01-24 12:30:00"
+                  }
+                }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/iam/login-logs/my": {
+      "get": {
+        "tags": ["Iam/LoginLog"],
+        "summary": "获取我的登录日志",
+        "description": "获取当前登录用户的登录历史",
+        "operationId": "getMyLoginLogs",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
+          { "name": "status", "in": "query", "description": "登录状态", "schema": { "type": "string", "enum": ["success", "failed"] } },
+          { "name": "ip", "in": "query", "description": "IP地址", "schema": { "type": "string" } },
+          { "name": "login_type", "in": "query", "description": "登录方式", "schema": { "type": "string" } },
+          { "name": "start_date", "in": "query", "description": "开始时间", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "end_date", "in": "query", "description": "结束时间", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "per_page", "in": "query", "schema": { "type": "integer", "default": 20 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "code": 200,
+                  "msg": "success",
+                  "data": {
+                    "list": [
+                      {
+                        "id": 1,
+                        "user_id": 1,
+                        "username": "admin",
+                        "account": "admin@scenic.local",
+                        "status": "success",
+                        "status_text": "成功",
+                        "ip": "127.0.0.1",
+                        "login_type": "password",
+                        "login_type_text": "密码登录",
+                        "login_at": "2026-01-24 12:30:00"
+                      }
+                    ],
+                    "total": 10
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Token"
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "未授权",
+        "content": {
+          "application/json": {
+            "example": { "code": 401, "msg": "未授权访问", "data": null }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "资源不存在",
+        "content": {
+          "application/json": {
+            "example": { "code": 404, "msg": "资源不存在", "data": null }
+          }
+        }
+      }
+    }
+  }
+}
