@@ -22,6 +22,7 @@ class RoleResource extends JsonResource
                 fn () => PermissionResource::collection($this->permissions)->toArray($request),
                 []
             ),
+            'users_count' => $this->whenCounted('users'),
         ];
     }
 }

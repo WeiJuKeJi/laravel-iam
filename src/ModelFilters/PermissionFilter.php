@@ -36,4 +36,19 @@ class PermissionFilter extends ModelFilter
                 ->orWhere('group', 'ilike', $like);
         });
     }
+
+    public function group(string $group): self
+    {
+        $group = trim($group);
+
+        if ($group === '') {
+            return $this;
+        }
+
+        if (! str_contains($group, '.')) {
+            return $this->where('group', 'ilike', $group.'.%');
+        }
+
+        return $this->where('group', $group);
+    }
 }

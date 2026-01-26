@@ -45,7 +45,7 @@ class LoginLog extends Model
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(config('iam.models.user', User::class));
     }
 
     /**

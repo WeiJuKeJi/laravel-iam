@@ -5,6 +5,7 @@ namespace WeiJuKeJi\LaravelIam\ModelFilters;
 use EloquentFilter\ModelFilter;
 use Illuminate\Support\Arr;
 use WeiJuKeJi\LaravelIam\Models\Department;
+use WeiJuKeJi\LaravelIam\Support\ConfigHelper;
 
 class UserFilter extends ModelFilter
 {
@@ -60,20 +61,22 @@ class UserFilter extends ModelFilter
         $ids = array_map('intval', array_filter($roles, fn ($value) => is_numeric($value)));
         $names = array_filter($roles, fn ($value) => ! is_numeric($value));
 
-        return $this->whereHas('roles', function ($query) use ($ids, $names) {
-            $query->where(function ($inner) use ($ids, $names) {
+        $rolesTable = ConfigHelper::table('roles');
+
+        return $this->whereHas('roles', function ($query) use ($ids, $names, $rolesTable) {
+            $query->where(function ($inner) use ($ids, $names, $rolesTable) {
                 if (! empty($ids)) {
-                    $inner->whereIn('roles.id', $ids);
+                    $inner->whereIn($rolesTable.'.id', $ids);
 
                     if (! empty($names)) {
-                        $inner->orWhereIn('roles.name', $names);
+                        $inner->orWhereIn($rolesTable.'.name', $names);
                     }
 
                     return;
                 }
 
                 if (! empty($names)) {
-                    $inner->whereIn('roles.name', $names);
+                    $inner->whereIn($rolesTable.'.name', $names);
                 }
             });
         });

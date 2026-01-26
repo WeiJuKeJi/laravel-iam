@@ -12,7 +12,10 @@
       "Bash(git commit:*)",
       "Bash(php -l:*)",
       "Bash(composer dump-autoload:*)",
-      "Bash(php artisan tinker:*)"
+      "Bash(php artisan tinker:*)",
+      "Bash(find:*)",
+      "Bash(php artisan:*)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []

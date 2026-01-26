@@ -10,13 +10,14 @@
       "get": {
         "tags": ["Iam/Permission"],
         "summary": "获取权限列表",
-        "description": "分页获取权限列表，支持按关键词、守卫筛选\n\n**测试用例：**\n1. 默认分页查询（page=1, per_page=50）\n2. 按关键词搜索（keywords=users）\n3. 按守卫筛选（guard_name=sanctum）",
+        "description": "分页获取权限列表，支持按关键词、守卫、分组筛选\n\n**测试用例：**\n1. 默认分页查询（page=1, per_page=50）\n2. 按关键词搜索（keywords=users）\n3. 按守卫筛选（guard_name=sanctum）\n4. 按分组筛选（group=device.Kiosks）",
         "operationId": "getPermissions",
         "security": [{ "bearerAuth": [] }],
         "parameters": [
           { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" },
-          { "name": "keywords", "in": "query", "description": "关键词搜索（权限名称/显示名称）", "schema": { "type": "string" } },
+          { "name": "keywords", "in": "query", "description": "关键词搜索（权限名称/显示名称/分组）", "schema": { "type": "string" } },
           { "name": "guard_name", "in": "query", "description": "守卫筛选", "schema": { "type": "string" } },
+          { "name": "group", "in": "query", "description": "权限分组 key，如 device.Kiosks", "schema": { "type": "string" } },
           { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
           { "name": "per_page", "in": "query", "schema": { "type": "integer", "default": 50, "minimum": 1, "maximum": 100 } }
         ],
@@ -25,7 +26,7 @@
             "description": "成功",
             "content": {
               "application/json": {
-                "example": { "code": 200, "msg": "success", "data": { "list": [{ "id": 1, "name": "iam.users.view", "display_name": "查看用户", "group": "用户管理", "guard_name": "sanctum", "created_at": "2025-11-14T00:00:00.000Z" }], "total": 1 } }
+                "example": { "code": 200, "msg": "success", "data": { "list": [{ "id": 1, "name": "device.kiosks.view", "display_name": "device.Kiosks.查看", "group": "device.Kiosks", "guard_name": "sanctum", "created_at": "2025-11-14T00:00:00.000Z" }], "total": 1 } }
               }
             }
           },
@@ -48,11 +49,11 @@
               "examples": {
                 "查看权限": {
                   "summary": "创建查看权限",
-                  "value": { "name": "iam.users.view", "display_name": "查看用户", "group": "用户管理" }
+                  "value": { "name": "iam.users.view", "display_name": "iam.Users.查看", "group": "iam.Users" }
                 },
                 "管理权限": {
                   "summary": "创建管理权限",
-                  "value": { "name": "iam.users.manage", "display_name": "管理用户", "group": "用户管理" }
+                  "value": { "name": "iam.users.manage", "display_name": "iam.Users.管理", "group": "iam.Users" }
                 }
               }
             }
@@ -63,11 +64,34 @@
             "description": "创建成功",
             "content": {
               "application/json": {
-                "example": { "code": 200, "msg": "权限创建成功", "data": { "id": 1, "name": "iam.users.view", "display_name": "查看用户", "group": "用户管理", "guard_name": "sanctum" } }
+                "example": { "code": 200, "msg": "权限创建成功", "data": { "id": 1, "name": "iam.users.view", "display_name": "iam.Users.查看", "group": "iam.Users", "guard_name": "sanctum" } }
               }
             }
           },
           "422": { "$ref": "#/components/responses/ValidationError" }
+        }
+      }
+    },
+    "/iam/permissions/groups": {
+      "get": {
+        "tags": ["Iam/Permission"],
+        "summary": "获取权限分组树",
+        "description": "获取权限分组树，用于左树右表\n\n**测试用例：**\n1. 获取分组树",
+        "operationId": "getPermissionGroups",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "Accept", "in": "header", "required": true, "schema": { "type": "string" }, "example": "application/json" }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "example": { "code": 200, "msg": "success", "data": { "tree": [{ "key": "device", "label": "Device 设备管理", "count": 13, "children": [{ "key": "device.Kiosks", "label": "Kiosks", "count": 5, "module": "device" }] }], "total": 1 } }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
         }
       }
     },
@@ -87,7 +111,7 @@
             "description": "成功",
             "content": {
               "application/json": {
-                "example": { "code": 200, "msg": "success", "data": { "id": 1, "name": "iam.users.view", "display_name": "查看用户", "group": "用户管理", "guard_name": "sanctum", "created_at": "2025-11-14T00:00:00.000Z" } }
+                "example": { "code": 200, "msg": "success", "data": { "id": 1, "name": "iam.users.view", "display_name": "iam.Users.查看", "group": "iam.Users", "guard_name": "sanctum", "created_at": "2025-11-14T00:00:00.000Z" } }
               }
             }
           },
@@ -111,11 +135,11 @@
               "examples": {
                 "更新名称": {
                   "summary": "更新显示名称",
-                  "value": { "display_name": "查看用户列表" }
+                  "value": { "display_name": "iam.Users.查看" }
                 },
                 "更新分组": {
                   "summary": "更新权限分组",
-                  "value": { "group": "IAM管理" }
+                  "value": { "group": "iam.Users" }
                 }
               }
             }
@@ -126,7 +150,7 @@
             "description": "更新成功",
             "content": {
               "application/json": {
-                "example": { "code": 200, "msg": "权限更新成功", "data": { "id": 1, "name": "iam.users.view", "display_name": "查看用户列表", "group": "IAM管理" } }
+                "example": { "code": 200, "msg": "权限更新成功", "data": { "id": 1, "name": "iam.users.view", "display_name": "iam.Users.查看", "group": "iam.Users" } }
               }
             }
           },

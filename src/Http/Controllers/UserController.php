@@ -2,6 +2,7 @@
 
 namespace WeiJuKeJi\LaravelIam\Http\Controllers;
 
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -43,7 +44,12 @@ class UserController extends Controller
         return $this->respondWithPagination($users, UserResource::class);
     }
 
-    public function store(UserStoreRequest $request): JsonResponse
+    /**
+     * 创建用户
+     *
+     * @param UserStoreRequest $request
+     */
+    public function store($request): JsonResponse
     {
         $data = $request->validated();
         $roles = Arr::pull($data, 'roles', []);
@@ -82,7 +88,13 @@ class UserController extends Controller
         return $this->respondWithResource($user, UserResource::class);
     }
 
-    public function update(UserUpdateRequest $request, User $user): JsonResponse
+    /**
+     * 更新用户
+     *
+     * @param UserUpdateRequest $request
+     * @param User $user
+     */
+    public function update($request, User $user): JsonResponse
     {
         $data = $request->validated();
         $roles = Arr::pull($data, 'roles');

@@ -36,6 +36,9 @@ Route::middleware(['api'])
             }
 
             Route::apiResource('roles', RoleController::class);
+
+            // 权限管理
+            Route::get('permissions/groups', [PermissionController::class, 'groups'])->name('permissions.groups');
             Route::apiResource('permissions', PermissionController::class);
 
             // 部门管理

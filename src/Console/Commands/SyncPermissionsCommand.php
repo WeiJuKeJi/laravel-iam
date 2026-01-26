@@ -7,6 +7,7 @@ use Illuminate\Routing\Route;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use Spatie\Permission\Exceptions\PermissionAlreadyExists;
 use WeiJuKeJi\LaravelIam\Models\Permission;
 use WeiJuKeJi\LaravelIam\Models\Role;
 
@@ -125,6 +126,7 @@ class SyncPermissionsCommand extends Command
         }
 
         $existingPermissions = Permission::query()
+            ->where('guard_name', $guard)
             ->whereIn('name', array_keys($permissionCandidates))
             ->get()
             ->keyBy('name');
@@ -135,6 +137,13 @@ class SyncPermissionsCommand extends Command
         foreach ($permissionCandidates as $name => $payload) {
             /** @var Permission|null $permission */
             $permission = $existingPermissions->get($name);
+
+            if (! $permission) {
+                $permission = Permission::query()
+                    ->where('name', $payload['name'])
+                    ->where('guard_name', $payload['guard_name'])
+                    ->first();
+            }
 
             if ($permission) {
                 $permission->fill(Arr::only($payload, ['display_name', 'group', 'guard_name']));
@@ -147,8 +156,26 @@ class SyncPermissionsCommand extends Command
                 continue;
             }
 
-            Permission::create($payload);
-            ++$created;
+            try {
+                Permission::create($payload);
+                ++$created;
+            } catch (PermissionAlreadyExists $e) {
+                $permission = Permission::query()
+                    ->where('name', $payload['name'])
+                    ->where('guard_name', $payload['guard_name'])
+                    ->first();
+
+                if ($permission) {
+                    $permission->fill(Arr::only($payload, ['display_name', 'group', 'guard_name']));
+                    if ($permission->isDirty()) {
+                        $permission->save();
+                        ++$updated;
+                    }
+                    continue;
+                }
+
+                throw $e;
+            }
         }
 
         $this->info(sprintf('同步完成：新增 %d 条，更新 %d 条。', $created, $updated));

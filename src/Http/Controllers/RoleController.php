@@ -29,6 +29,10 @@ class RoleController extends Controller
             $query->with('permissions');
         }
 
+        if ($request->boolean('with_users_count')) {
+            $query->withCount('users');
+        }
+
         $roles = $query->orderBy('id')->paginate($perPage);
 
         return $this->respondWithPagination($roles, RoleResource::class);

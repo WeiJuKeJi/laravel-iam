@@ -10,6 +10,13 @@ use WeiJuKeJi\LaravelIam\Models\User;
 
 class AuthService
 {
+    protected function resolveUserModelClass(): string
+    {
+        $model = config('iam.models.user', User::class);
+
+        return is_a($model, User::class, true) ? $model : User::class;
+    }
+
     /**
      * 尝试登录，并返回令牌相关信息。
      *
@@ -17,7 +24,8 @@ class AuthService
      */
     public function attemptLogin(string $account, string $password, string $ip, ?string $userAgent = null): array
     {
-        $user = User::query()
+        $userModel = $this->resolveUserModelClass();
+        $user = $userModel::query()
             ->where(function ($query) use ($account) {
                 $query->where('email', $account)
                     ->orWhere('username', $account)
@@ -88,7 +96,7 @@ class AuthService
      */
     public function profile(User $user): array
     {
-        $user->loadMissing(['roles.permissions', 'permissions']);
+        $user->loadMissing(['roles.permissions', 'permissions', 'department']);
 
         $roles = $user->roles
             ->pluck('name')
@@ -108,10 +116,24 @@ class AuthService
             ?? ($user->avatar ?? 'https://i.gtimg.cn/club/item/face/img/2/16022_100.gif');
 
         return [
-            'username' => $user->username ?? $user->name,
+            'id' => $user->id,
+            'name' => $user->name,
+            'username' => $user->username,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'user_type' => $user->user_type,
+            'status' => $user->status,
+            'avatar' => $avatar,
+            'department_id' => $user->department_id,
+            'department' => $user->department ? [
+                'id' => $user->department->id,
+                'name' => $user->department->name,
+            ] : null,
             'roles' => $roles,
             'permissions' => $permissions,
-            'avatar' => $avatar,
+            'created_at' => $user->created_at?->toDateTimeString(),
+            'last_login_at' => $user->last_login_at?->toDateTimeString(),
+            'last_login_ip' => $user->last_login_ip,
         ];
     }
 

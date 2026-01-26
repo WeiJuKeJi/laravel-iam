@@ -9,7 +9,7 @@ use WeiJuKeJi\LaravelIam\Services\AuthService;
 
 class AuthController extends Controller
 {
-    public function __construct(private readonly AuthService $authService)
+    public function __construct(protected readonly AuthService $authService)
     {
     }
 

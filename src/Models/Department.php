@@ -46,7 +46,7 @@ class Department extends Model
      */
     public function manager(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'manager_id');
+        return $this->belongsTo(config('iam.models.user', User::class), 'manager_id');
     }
 
     /**
@@ -54,7 +54,7 @@ class Department extends Model
      */
     public function users(): HasMany
     {
-        return $this->hasMany(User::class, 'department_id');
+        return $this->hasMany(config('iam.models.user', User::class), 'department_id');
     }
 
     /**

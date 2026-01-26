@@ -20,7 +20,7 @@ class UserUpdateRequest extends FormRequest
         $user = $this->route('user');
         $userId = $user?->getKey();
 
-        return [
+        $baseRules = [
             'name' => ['sometimes', 'string', 'max:120'],
             'email' => [
                 'sometimes',
@@ -36,12 +36,31 @@ class UserUpdateRequest extends FormRequest
             ],
             'password' => ['sometimes', 'nullable', 'string', 'min:8'],
             'status' => ['sometimes', 'nullable', Rule::in(['active', 'inactive'])],
+            'user_type' => [
+                'sometimes',
+                'nullable',
+                'string',
+                Rule::in(array_keys(config('iam.user_types', []))),
+            ],
             'phone' => ['sometimes', 'nullable', 'string', 'max:30'],
             'department_id' => ['sometimes', 'nullable', 'integer', 'exists:' . ConfigHelper::table('departments') . ',id'],
             'metadata' => ['sometimes', 'nullable', 'array'],
             'roles' => ['sometimes', 'array'],
             'roles.*' => ['integer', 'exists:' . ConfigHelper::table('roles') . ',id'],
         ];
+
+        // 允许应用层添加自定义字段验证
+        return array_merge($baseRules, $this->customRules());
+    }
+
+    /**
+     * 自定义验证规则（供子类重写）
+     *
+     * @return array
+     */
+    protected function customRules(): array
+    {
+        return [];
     }
 
     public function attributes(): array
@@ -52,6 +71,7 @@ class UserUpdateRequest extends FormRequest
             'username' => '用户名',
             'password' => '密码',
             'status' => '状态',
+            'user_type' => '用户类型',
             'phone' => '联系电话',
             'department_id' => '所属部门',
             'metadata' => '扩展信息',
