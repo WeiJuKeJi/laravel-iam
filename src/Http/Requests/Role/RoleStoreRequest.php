@@ -30,6 +30,8 @@ class RoleStoreRequest extends FormRequest
             'metadata' => ['nullable', 'array'],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['integer', 'exists:' . ConfigHelper::table('permissions') . ',id'],
+            'menu_ids' => ['nullable', 'array'],
+            'menu_ids.*' => ['integer', 'exists:' . ConfigHelper::table('menus') . ',id'],
         ];
     }
 
@@ -41,6 +43,7 @@ class RoleStoreRequest extends FormRequest
             'group' => '角色分组',
             'guard_name' => '守卫',
             'permissions' => '权限集合',
+            'menu_ids' => '菜单集合',
         ];
     }
 }

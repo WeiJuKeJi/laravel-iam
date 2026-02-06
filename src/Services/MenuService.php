@@ -33,22 +33,21 @@ class MenuService
     public function getMenuTreeForUser(User $user, bool $forceRefresh = false): array
     {
         $roles = $user->getRoleNames()->sort()->values()->all();
-        $permissions = $user->getAllPermissions()->pluck('name')->sort()->values()->all();
 
-        $cacheKey = $this->cacheKey($roles, $permissions);
+        $cacheKey = $this->cacheKey($roles);
 
         if ($forceRefresh) {
             $this->forgetCacheKey($cacheKey);
         }
 
-        return $this->rememberWithTags($cacheKey, function () use ($roles, $permissions) {
+        return $this->rememberWithTags($cacheKey, function () use ($roles) {
             $menus = Menu::query()
-                ->with(['roles:id,name', 'permissions:id,name'])
+                ->with(['roles:id,name'])
                 ->where('is_enabled', true)
                 ->get();
 
             $tree = Menu::buildTree($menus);
-            $filtered = $this->filterTree($tree, $roles, $permissions);
+            $filtered = $this->filterTree($tree, $roles);
 
             $list = $filtered->map(fn (Menu $menu) => $menu->toFrontendArray())->all();
             $version = $this->generateVersion($menus);
@@ -81,12 +80,11 @@ class MenuService
         }
     }
 
-    protected function cacheKey(array $roles, array $permissions): string
+    protected function cacheKey(array $roles): string
     {
         $roleHash = md5(json_encode($roles));
-        $permissionHash = md5(json_encode($permissions));
 
-        return self::CACHE_PREFIX . "tree:{$roleHash}:{$permissionHash}";
+        return self::CACHE_PREFIX . "tree:{$roleHash}";
     }
 
     protected function forgetCacheKey(string $cacheKey): void
@@ -100,13 +98,13 @@ class MenuService
         }
     }
 
-    protected function filterTree(Collection $menus, array $roles, array $permissions): Collection
+    protected function filterTree(Collection $menus, array $roles): Collection
     {
-        return $menus->map(function (Menu $menu) use ($roles, $permissions) {
-            $children = $this->filterTree($menu->children, $roles, $permissions);
+        return $menus->map(function (Menu $menu) use ($roles) {
+            $children = $this->filterTree($menu->children, $roles);
             $menu->setRelation('children', $children);
 
-            $visible = $menu->isVisibleFor($roles, $permissions);
+            $visible = $menu->isVisibleFor($roles, []);
 
             if (! $visible && $children->isEmpty()) {
                 return null;

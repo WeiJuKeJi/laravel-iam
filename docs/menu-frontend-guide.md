@@ -45,10 +45,9 @@ interface MenuNode {
   redirect: string | null         // 重定向地址
   sort_order: number              // 排序值，越小越靠前
   is_enabled: boolean             // 是否启用
+  is_public: boolean              // 是否公共菜单
   meta: MenuMeta                  // 路由元信息
-  guard: string[] | GuardConfig   // 守卫配置
-  roles: string[]                 // 关联角色名称
-  permissions: string[]           // 关联权限名称
+  role_ids: number[]              // 关联角色 ID
   children: MenuNode[]            // 子菜单
 }
 
@@ -56,18 +55,13 @@ interface MenuMeta {
   title: string                   // 菜单标题
   icon?: string                   // 图标
   hidden?: boolean                // 是否隐藏
-  noCache?: boolean               // 不缓存
-  affix?: boolean                 // 固定标签
-  breadcrumb?: boolean            // 显示面包屑
+  noKeepAlive?: boolean           // 禁用缓存
+  noClosable?: boolean            // 固定标签页
+  dot?: boolean                   // 显示小圆点
+  badge?: string                  // 徽标文字
   target?: '_blank' | '_self'     // 链接打开方式（外链用）
   dynamicNewTab?: boolean         // 动态新标签页（iframe 用）
-  permissions?: string[]          // 前端权限验证
   [key: string]: any              // 其他自定义字段
-}
-
-interface GuardConfig {
-  role: string[]
-  mode: 'include' | 'except'      // include=白名单, except=黑名单
 }
 ```
 
@@ -82,10 +76,9 @@ interface MenuInput {
   redirect?: string | null
   sort_order?: number             // 默认 0
   is_enabled?: boolean            // 默认 true
+  is_public?: boolean             // 默认 false
   meta?: Record<string, any>
-  guard?: string[] | GuardConfig
   role_ids?: number[]             // 关联角色 ID
-  permission_ids?: number[]       // 关联权限 ID
 }
 ```
 
@@ -132,8 +125,7 @@ interface ErrorResponse {
   "component": "system/users/index",
   "meta": {
     "title": "用户管理",
-    "icon": "user",
-    "permissions": ["iam.users.view"]
+    "icon": "user"
   }
 }
 ```
@@ -522,6 +514,10 @@ export function deleteMenu(id: number) {
       <el-switch v-model="form.is_enabled" />
     </el-form-item>
 
+    <el-form-item label="公共菜单">
+      <el-switch v-model="form.is_public" />
+    </el-form-item>
+
     <el-form-item label="是否隐藏">
       <el-switch v-model="form.meta.hidden" />
     </el-form-item>
@@ -536,17 +532,6 @@ export function deleteMenu(id: number) {
         />
       </el-select>
     </el-form-item>
-
-    <el-form-item label="关联权限">
-      <el-select v-model="form.permission_ids" multiple placeholder="选择权限">
-        <el-option
-          v-for="perm in permissions"
-          :key="perm.id"
-          :label="perm.display_name || perm.name"
-          :value="perm.id"
-        />
-      </el-select>
-    </el-form-item>
   </el-form>
 </template>
 
@@ -557,7 +542,6 @@ const props = defineProps<{
   modelValue: MenuInput
   menuTree: MenuNode[]
   roles: Role[]
-  permissions: Permission[]
 }>()
 
 const emit = defineEmits(['update:modelValue'])
@@ -683,7 +667,6 @@ const rules = {
         v-model="formData"
         :menu-tree="menuTree"
         :roles="roles"
-        :permissions="permissions"
       />
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -706,7 +689,6 @@ import {
   deleteMenu
 } from '@/api/menu'
 import { getRoleList } from '@/api/role'
-import { getPermissionList } from '@/api/permission'
 import { useMenuStore } from '@/stores/menu'
 import MenuForm from './components/MenuForm.vue'
 
@@ -718,7 +700,6 @@ const dialogVisible = ref(false)
 const dialogTitle = ref('')
 const menuTree = ref<MenuNode[]>([])
 const roles = ref<Role[]>([])
-const permissions = ref<Permission[]>([])
 const formData = ref<MenuInput>(getDefaultForm())
 const editingId = ref<number | null>(null)
 
@@ -731,10 +712,9 @@ function getDefaultForm(): MenuInput {
     redirect: '',
     sort_order: 0,
     is_enabled: true,
+    is_public: false,
     meta: { title: '', icon: '' },
-    guard: [],
-    role_ids: [],
-    permission_ids: []
+    role_ids: []
   }
 }
 
@@ -745,14 +725,12 @@ function isExternalLink(path: string): boolean {
 async function fetchData() {
   loading.value = true
   try {
-    const [menuRes, roleRes, permRes] = await Promise.all([
+    const [menuRes, roleRes] = await Promise.all([
       getMenuTree(),
-      getRoleList({ per_page: 100 }),
-      getPermissionList({ per_page: 200 })
+      getRoleList({ per_page: 100 })
     ])
     menuTree.value = menuRes.data.list
     roles.value = roleRes.data.list
-    permissions.value = permRes.data.list
   } finally {
     loading.value = false
   }
@@ -782,10 +760,9 @@ function handleEdit(row: MenuNode) {
     redirect: row.redirect,
     sort_order: row.sort_order,
     is_enabled: row.is_enabled,
+    is_public: row.is_public,
     meta: { ...row.meta },
-    guard: row.guard,
-    role_ids: [], // 需要从详情接口获取
-    permission_ids: []
+    role_ids: row.role_ids || []
   }
   dialogTitle.value = '编辑菜单'
   dialogVisible.value = true
@@ -890,5 +867,5 @@ if (response.code === 422 && response.msg.includes('子菜单')) {
 - [ ] 内嵌网页正常显示
 - [ ] 菜单增删改查功能正常
 - [ ] 菜单变更后路由即时刷新
-- [ ] 权限控制正确生效
+- [ ] 角色绑定菜单正确生效
 - [ ] 错误状态正确处理

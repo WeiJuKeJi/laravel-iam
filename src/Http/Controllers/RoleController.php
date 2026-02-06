@@ -9,6 +9,7 @@ use WeiJuKeJi\LaravelIam\Http\Requests\Role\RoleStoreRequest;
 use WeiJuKeJi\LaravelIam\Http\Requests\Role\RoleUpdateRequest;
 use WeiJuKeJi\LaravelIam\Http\Resources\RoleResource;
 use WeiJuKeJi\LaravelIam\Models\Role;
+use WeiJuKeJi\LaravelIam\Services\MenuService;
 
 class RoleController extends Controller
 {
@@ -29,6 +30,10 @@ class RoleController extends Controller
             $query->with('permissions');
         }
 
+        if ($request->boolean('with_menus')) {
+            $query->with('menus');
+        }
+
         if ($request->boolean('with_users_count')) {
             $query->withCount('users');
         }
@@ -42,11 +47,17 @@ class RoleController extends Controller
     {
         $data = $request->validated();
         $permissions = Arr::pull($data, 'permissions', []);
+        $menuIds = Arr::pull($data, 'menu_ids', []);
 
         $role = Role::create($data + ['guard_name' => $data['guard_name'] ?? 'sanctum']);
 
         if (! empty($permissions)) {
             $role->syncPermissions($permissions);
+        }
+
+        if (! empty($menuIds)) {
+            $role->menus()->sync($menuIds);
+            app(MenuService::class)->flushCache();
         }
 
         $role->load('permissions');
@@ -62,6 +73,10 @@ class RoleController extends Controller
             $role->loadMissing('permissions');
         }
 
+        if ($request->boolean('with_menus')) {
+            $role->loadMissing('menus');
+        }
+
         return $this->respondWithResource($role, RoleResource::class);
     }
 
@@ -69,6 +84,7 @@ class RoleController extends Controller
     {
         $data = $request->validated();
         $permissions = Arr::pull($data, 'permissions');
+        $menuIds = Arr::pull($data, 'menu_ids');
 
         if (! empty($data)) {
             $role->fill($data);
@@ -77,6 +93,11 @@ class RoleController extends Controller
 
         if (! is_null($permissions)) {
             $role->syncPermissions($permissions);
+        }
+
+        if (! is_null($menuIds)) {
+            $role->menus()->sync($menuIds);
+            app(MenuService::class)->flushCache();
         }
 
         $role->load('permissions');

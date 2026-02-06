@@ -25,7 +25,7 @@ class MenuAdminController extends Controller
         $perPage = $this->resolvePerPage($params);
 
         $records = Menu::filter($params)
-            ->with(['roles:id,name', 'permissions:id,name'])
+            ->with(['roles:id,name'])
             ->orderBy('sort_order')
             ->orderBy('id')
             ->paginate($perPage);
@@ -38,7 +38,7 @@ class MenuAdminController extends Controller
         $params = $request->only(['parent_id', 'name', 'path', 'is_enabled']);
 
         $menus = Menu::filter($params)
-            ->with(['roles:id,name', 'permissions:id,name'])
+            ->with(['roles:id,name'])
             ->get();
 
         $tree = Menu::buildTree($menus);
@@ -56,21 +56,16 @@ class MenuAdminController extends Controller
         $data = $request->validated();
 
         $roles = Arr::pull($data, 'role_ids', []);
-        $permissions = Arr::pull($data, 'permission_ids', []);
 
         // 缓存清除由 Menu 模型的 saved 事件自动处理
-        $menu = $this->db->transaction(function () use ($data, $roles, $permissions) {
+        $menu = $this->db->transaction(function () use ($data, $roles) {
             $menu = Menu::create($data);
 
             if (! empty($roles)) {
                 $menu->roles()->sync($roles);
             }
 
-            if (! empty($permissions)) {
-                $menu->permissions()->sync($permissions);
-            }
-
-            return $menu->fresh(['roles:id,name', 'permissions:id,name', 'children']);
+            return $menu->fresh(['roles:id,name', 'children']);
         });
 
         $payload = MenuResource::make($menu)->toArray($request);
@@ -80,7 +75,7 @@ class MenuAdminController extends Controller
 
     public function show(Menu $menu): JsonResponse
     {
-        $menu->load(['roles:id,name', 'permissions:id,name', 'children']);
+        $menu->load(['roles:id,name', 'children']);
 
         return $this->respondWithResource($menu, MenuResource::class);
     }
@@ -90,17 +85,15 @@ class MenuAdminController extends Controller
         $data = $request->validated();
 
         $roles = Arr::pull($data, 'role_ids', []);
-        $permissions = Arr::pull($data, 'permission_ids', []);
 
         // 缓存清除由 Menu 模型的 saved 事件自动处理
-        $menu = $this->db->transaction(function () use ($menu, $data, $roles, $permissions) {
+        $menu = $this->db->transaction(function () use ($menu, $data, $roles) {
             $menu->fill($data);
             $menu->save();
 
             $menu->roles()->sync($roles);
-            $menu->permissions()->sync($permissions);
 
-            return $menu->fresh(['roles:id,name', 'permissions:id,name', 'children']);
+            return $menu->fresh(['roles:id,name', 'children']);
         });
 
         $payload = MenuResource::make($menu)->toArray($request);

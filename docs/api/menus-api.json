@@ -37,7 +37,7 @@
       "post": {
         "tags": ["Iam/Menu"],
         "summary": "创建菜单",
-        "description": "创建新菜单，可同时关联角色和权限\n\n**测试用例：**\n1. 创建顶级菜单\n2. 创建子菜单（带权限）",
+        "description": "创建新菜单，可同时关联角色\n\n**测试用例：**\n1. 创建顶级菜单\n2. 创建子菜单（带角色绑定）",
         "operationId": "createMenu",
         "security": [{ "bearerAuth": [] }],
         "parameters": [
@@ -53,8 +53,8 @@
                   "value": { "name": "System", "path": "/system", "component": "Layout", "sort_order": 10, "is_enabled": true, "meta": { "title": "系统管理", "icon": "settings-line" } }
                 },
                 "子菜单": {
-                  "summary": "创建子菜单（带权限）",
-                  "value": { "parent_id": 1, "name": "UserManagement", "path": "users", "component": "/@/views/iam/user/index.vue", "sort_order": 0, "is_enabled": true, "meta": { "title": "用户管理", "icon": "user-line" }, "permission_ids": [1, 2] }
+                  "summary": "创建子菜单（带角色绑定）",
+                  "value": { "parent_id": 1, "name": "UserManagement", "path": "users", "component": "/@/views/iam/user/index.vue", "sort_order": 0, "is_enabled": true, "meta": { "title": "用户管理", "icon": "user-line" }, "role_ids": [1, 2] }
                 }
               }
             }
@@ -92,7 +92,7 @@
             "description": "成功",
             "content": {
               "application/json": {
-                "example": { "code": 200, "msg": "success", "data": [{ "id": 1, "parent_id": null, "name": "System", "path": "/system", "component": "Layout", "sort_order": 10, "is_enabled": true, "meta": { "title": "系统管理", "icon": "settings-line" }, "roles": [], "permissions": [], "children": [{ "id": 2, "parent_id": 1, "name": "UserManagement", "path": "users", "component": "/@/views/iam/user/index.vue", "sort_order": 0, "is_enabled": true, "meta": { "title": "用户管理", "icon": "user-line" }, "roles": [], "permissions": [{ "id": 1, "name": "iam.users.view" }], "children": [] }] }] }
+                "example": { "code": 200, "msg": "success", "data": [{ "id": 1, "parent_id": null, "name": "System", "path": "/system", "component": "Layout", "sort_order": 10, "is_enabled": true, "meta": { "title": "系统管理", "icon": "settings-line" }, "roles": [], "children": [{ "id": 2, "parent_id": 1, "name": "UserManagement", "path": "users", "component": "/@/views/iam/user/index.vue", "sort_order": 0, "is_enabled": true, "meta": { "title": "用户管理", "icon": "user-line" }, "roles": [], "children": [] }] }] }
               }
             }
           },
@@ -116,7 +116,7 @@
             "description": "成功",
             "content": {
               "application/json": {
-                "example": { "code": 200, "msg": "success", "data": { "id": 1, "parent_id": null, "name": "System", "path": "/system", "component": "Layout", "sort_order": 10, "is_enabled": true, "meta": { "title": "系统管理", "icon": "settings-line" }, "roles": [], "permissions": [], "children": [] } }
+                "example": { "code": 200, "msg": "success", "data": { "id": 1, "parent_id": null, "name": "System", "path": "/system", "component": "Layout", "sort_order": 10, "is_enabled": true, "meta": { "title": "系统管理", "icon": "settings-line" }, "roles": [], "children": [] } }
               }
             }
           },
@@ -126,7 +126,7 @@
       "put": {
         "tags": ["Iam/Menu"],
         "summary": "更新菜单",
-        "description": "更新菜单信息，所有字段均为可选\n\n**测试用例：**\n1. 更新基本信息（名称、路径）\n2. 更新排序和状态\n3. 更新关联权限",
+        "description": "更新菜单信息，所有字段均为可选\n\n**测试用例：**\n1. 更新基本信息（名称、路径）\n2. 更新排序和状态\n3. 更新关联角色",
         "operationId": "updateMenu",
         "security": [{ "bearerAuth": [] }],
         "parameters": [
@@ -146,9 +146,9 @@
                   "summary": "调整排序和启用状态",
                   "value": { "sort_order": 5, "is_enabled": false }
                 },
-                "更新权限": {
-                  "summary": "更新关联权限",
-                  "value": { "permission_ids": [1, 2, 3] }
+                "更新角色": {
+                  "summary": "更新关联角色",
+                  "value": { "role_ids": [1, 2, 3] }
                 }
               }
             }

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Spatie\Permission\PermissionRegistrar;
 use Spatie\Permission\Models\Role as BaseRole;
+use WeiJuKeJi\LaravelIam\Models\Menu;
 use WeiJuKeJi\LaravelIam\Support\ConfigHelper;
 
 class Role extends BaseRole
@@ -40,6 +41,11 @@ class Role extends BaseRole
     public function modelFilter()
     {
         return $this->provideFilter(\WeiJuKeJi\LaravelIam\ModelFilters\RoleFilter::class);
+    }
+
+    public function menus(): BelongsToMany
+    {
+        return $this->belongsToMany(Menu::class, ConfigHelper::table('menu_role'))->withTimestamps();
     }
 
     /**

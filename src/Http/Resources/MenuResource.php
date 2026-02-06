@@ -21,10 +21,10 @@ class MenuResource extends JsonResource
             'redirect' => $this->redirect,
             'sort_order' => $this->sort_order,
             'is_enabled' => $this->is_enabled,
+            'is_public' => $this->is_public ?? false,
             'meta' => $this->meta ?? [],
-            'guard' => $this->guard ?? [],
             'roles' => $this->whenLoaded('roles', fn () => $this->roles->pluck('name'), []),
-            'permissions' => $this->whenLoaded('permissions', fn () => $this->permissions->pluck('name'), []),
+            'role_ids' => $this->whenLoaded('roles', fn () => $this->roles->pluck('id'), []),
             'children' => $this->whenLoaded(
                 'children',
                 fn () => MenuResource::collection($this->children)->toArray($request),

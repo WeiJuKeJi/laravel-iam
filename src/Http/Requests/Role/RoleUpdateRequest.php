@@ -34,6 +34,8 @@ class RoleUpdateRequest extends FormRequest
             'metadata' => ['sometimes', 'nullable', 'array'],
             'permissions' => ['sometimes', 'array'],
             'permissions.*' => ['integer', 'exists:' . ConfigHelper::table('permissions') . ',id'],
+            'menu_ids' => ['sometimes', 'array'],
+            'menu_ids.*' => ['integer', 'exists:' . ConfigHelper::table('menus') . ',id'],
         ];
     }
 
@@ -45,6 +47,7 @@ class RoleUpdateRequest extends FormRequest
             'group' => '角色分组',
             'guard_name' => '守卫',
             'permissions' => '权限集合',
+            'menu_ids' => '菜单集合',
         ];
     }
 }

@@ -10,9 +10,7 @@ return new class extends Migration {
     {
         $menus = ConfigHelper::table('menus');
         $menuRole = ConfigHelper::table('menu_role');
-        $menuPermission = ConfigHelper::table('menu_permission');
         $roles = ConfigHelper::table('roles');
-        $permissions = ConfigHelper::table('permissions');
 
         Schema::create($menus, function (Blueprint $table) use ($menus) {
             $table->id();
@@ -26,8 +24,8 @@ return new class extends Migration {
             $table->string('redirect')->nullable()->comment('重定向地址');
             $table->unsignedInteger('sort_order')->default(0)->comment('排序，数值越小越靠前');
             $table->boolean('is_enabled')->default(true)->comment('是否启用');
+            $table->boolean('is_public')->default(false)->comment('是否为公共菜单，公共菜单对所有登录用户可见');
             $table->json('meta')->nullable()->comment('前端路由元信息');
-            $table->json('guard')->nullable()->comment('额外守卫配置，支持角色/权限白名单或黑名单');
             $table->timestamps();
 
             // 索引：parent_id 用于树形结构查询
@@ -47,19 +45,10 @@ return new class extends Migration {
             $table->timestamps();
             $table->unique(['menu_id', 'role_id']);
         });
-
-        Schema::create($menuPermission, function (Blueprint $table) use ($menus, $permissions) {
-            $table->id();
-            $table->foreignId('menu_id')->constrained($menus)->cascadeOnDelete();
-            $table->foreignId('permission_id')->constrained($permissions)->cascadeOnDelete();
-            $table->timestamps();
-            $table->unique(['menu_id', 'permission_id']);
-        });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists(ConfigHelper::table('menu_permission'));
         Schema::dropIfExists(ConfigHelper::table('menu_role'));
         Schema::dropIfExists(ConfigHelper::table('menus'));
     }

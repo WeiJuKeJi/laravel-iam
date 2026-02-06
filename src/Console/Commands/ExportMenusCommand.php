@@ -76,10 +76,6 @@ class ExportMenusCommand extends Command
             $data['meta'] = $menu->meta;
         }
 
-        if (! is_null($menu->guard)) {
-            $data['guard'] = $menu->guard;
-        }
-
         if ($menu->children->isNotEmpty()) {
             $data['children'] = $menu->children
                 ->map(fn (Menu $child) => $this->transformMenu($child))

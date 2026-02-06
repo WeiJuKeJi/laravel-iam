@@ -22,6 +22,10 @@ class RoleResource extends JsonResource
                 fn () => PermissionResource::collection($this->permissions)->toArray($request),
                 []
             ),
+            'menus' => $this->whenLoaded('menus', fn () => $this->menus->map(fn ($m) => [
+                'id' => $m->id, 'name' => $m->name, 'meta' => $m->meta,
+            ])->toArray(), []),
+            'menu_ids' => $this->whenLoaded('menus', fn () => $this->menus->pluck('id')->toArray(), []),
             'users_count' => $this->whenCounted('users'),
         ];
     }

@@ -17,7 +17,6 @@ class MenuUpdateRequest extends FormRequest
     {
         $this->merge([
             'role_ids' => $this->input('role_ids', []),
-            'permission_ids' => $this->input('permission_ids', []),
         ]);
     }
 
@@ -39,12 +38,10 @@ class MenuUpdateRequest extends FormRequest
             'redirect' => ['nullable', 'string', 'max:255'],
             'sort_order' => ['nullable', 'integer', 'between:0,9999'],
             'is_enabled' => ['sometimes', 'boolean'],
+            'is_public' => ['sometimes', 'boolean'],
             'meta' => ['nullable', 'array'],
-            'guard' => ['nullable', 'array'],
             'role_ids' => ['array'],
             'role_ids.*' => ['integer', 'exists:' . ConfigHelper::table('roles') . ',id'],
-            'permission_ids' => ['array'],
-            'permission_ids.*' => ['integer', 'exists:' . ConfigHelper::table('permissions') . ',id'],
         ];
     }
 
@@ -58,10 +55,9 @@ class MenuUpdateRequest extends FormRequest
             'redirect' => '重定向地址',
             'sort_order' => '排序',
             'is_enabled' => '启用状态',
+            'is_public' => '公共菜单',
             'meta' => '路由元信息',
-            'guard' => '守卫配置',
             'role_ids' => '关联角色',
-            'permission_ids' => '关联权限',
         ];
     }
 }

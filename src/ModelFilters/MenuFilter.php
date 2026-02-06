@@ -27,4 +27,9 @@ class MenuFilter extends ModelFilter
     {
         return $this->where('is_enabled', (bool)$value);
     }
+
+    public function isPublic(int|string $value)
+    {
+        return $this->where('is_public', (bool)$value);
+    }
 }

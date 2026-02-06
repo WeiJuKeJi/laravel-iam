@@ -9,8 +9,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Arr;
-use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use WeiJuKeJi\LaravelIam\Support\ConfigHelper;
 
@@ -51,14 +49,14 @@ class Menu extends Model
         'redirect',
         'sort_order',
         'is_enabled',
+        'is_public',
         'meta',
-        'guard',
     ];
 
     protected $casts = [
         'meta' => 'array',
-        'guard' => 'array',
         'is_enabled' => 'boolean',
+        'is_public' => 'boolean',
     ];
 
     public function modelFilter()
@@ -81,11 +79,6 @@ class Menu extends Model
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class, ConfigHelper::table('menu_role'))->withTimestamps();
-    }
-
-    public function permissions(): BelongsToMany
-    {
-        return $this->belongsToMany(Permission::class, ConfigHelper::table('menu_permission'))->withTimestamps();
     }
 
     /**
@@ -120,11 +113,6 @@ class Menu extends Model
         $this->attributes['meta'] = empty($value) ? null : json_encode($value, JSON_UNESCAPED_UNICODE);
     }
 
-    public function setGuardAttribute($value): void
-    {
-        $this->attributes['guard'] = empty($value) ? null : json_encode($value, JSON_UNESCAPED_UNICODE);
-    }
-
     public function toFrontendArray(): array
     {
         $data = [
@@ -138,10 +126,6 @@ class Menu extends Model
         }
 
         $meta = $this->meta ?? [];
-
-        if ($this->guard) {
-            $meta['guard'] = $this->guard;
-        }
 
         if (! empty($meta)) {
             $data['meta'] = $meta;
@@ -157,7 +141,7 @@ class Menu extends Model
     }
 
     /**
-     * 根据角色和权限过滤菜单。
+     * 根据角色过滤菜单。
      */
     public function isVisibleFor(array $roles, array $permissions): bool
     {
@@ -165,37 +149,22 @@ class Menu extends Model
             return false;
         }
 
-        if ($this->roles->isNotEmpty() && ! $this->roles->pluck('name')->intersect($roles)->isNotEmpty()) {
-            return false;
-        }
-
-        if ($this->permissions->isNotEmpty() && ! $this->permissions->pluck('name')->intersect($permissions)->isNotEmpty()) {
-            return false;
-        }
-
-        $guard = $this->guard ?? [];
-
-        if (empty($guard)) {
+        // super-admin 角色可以看到所有启用的菜单
+        if (in_array('super-admin', $roles)) {
             return true;
         }
 
-        if (Arr::isAssoc($guard)) {
-            $targetRoles = Arr::get($guard, 'role', []);
-            $mode = Arr::get($guard, 'mode', 'include');
-
-            if ($mode === 'include') {
-                return empty($targetRoles) || ! empty(array_intersect($roles, $targetRoles));
-            }
-
-            if ($mode === 'except') {
-                return empty(array_intersect($roles, $targetRoles));
-            }
+        // 公共菜单对所有登录用户可见
+        if ($this->is_public) {
+            return true;
         }
 
-        if (is_array($guard) && ! Arr::isAssoc($guard)) {
-            return ! empty(array_intersect($roles, $guard));
+        // 如果菜单关联了角色，检查用户是否拥有这些角色
+        if ($this->roles->isNotEmpty()) {
+            return $this->roles->pluck('name')->intersect($roles)->isNotEmpty();
         }
 
-        return true;
+        // 菜单没有关联任何角色，且不是公共菜单，默认拒绝访问
+        return false;
     }
 }

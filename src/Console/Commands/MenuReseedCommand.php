@@ -54,7 +54,6 @@ class MenuReseedCommand extends Command
 
             // 清空关联表
             DB::table(ConfigHelper::table('menu_role'))->truncate();
-            DB::table(ConfigHelper::table('menu_permission'))->truncate();
 
             // 清空菜单表
             DB::table(ConfigHelper::table('menus'))->truncate();
