@@ -2,12 +2,16 @@
 
 namespace WeiJuKeJi\LaravelIam\Http\Controllers;
 
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use WeiJuKeJi\LaravelIam\Exceptions\DepartmentException;
+use WeiJuKeJi\LaravelIam\Exceptions\DepartmentMoveException;
 use WeiJuKeJi\LaravelIam\Http\Requests\Department\DepartmentStoreRequest;
 use WeiJuKeJi\LaravelIam\Http\Requests\Department\DepartmentUpdateRequest;
 use WeiJuKeJi\LaravelIam\Http\Resources\DepartmentResource;
 use WeiJuKeJi\LaravelIam\Models\Department;
+use WeiJuKeJi\LaravelIam\Services\DepartmentMoveService;
 
 class DepartmentController extends Controller
 {
@@ -145,19 +149,23 @@ class DepartmentController extends Controller
      */
     public function destroy(Department $department): JsonResponse
     {
-        // 检查是否有子部门
-        if ($department->children()->exists()) {
-            return $this->error('该部门下还有子部门，无法删除', 400, [], 400);
+        try {
+            // 检查是否有子部门
+            if ($department->children()->exists()) {
+                throw DepartmentException::hasChildren();
+            }
+
+            // 检查是否有员工
+            if ($department->users()->exists()) {
+                throw DepartmentException::hasUsers();
+            }
+
+            $department->delete();
+
+            return $this->success(null, '部门删除成功');
+        } catch (DepartmentException $e) {
+            return $this->error($e->getMessage(), $e->getCode());
         }
-
-        // 检查是否有员工
-        if ($department->users()->exists()) {
-            return $this->error('该部门下还有员工，无法删除', 400, [], 400);
-        }
-
-        $department->delete();
-
-        return $this->success(null, '部门删除成功');
     }
 
     /**
@@ -171,38 +179,22 @@ class DepartmentController extends Controller
             'target_id' => 'required_unless:position,inside|integer|exists:' . $department->getTable() . ',id',
         ]);
 
-        $position = $request->input('position');
-        $targetId = $request->input('target_id');
-
         try {
-            switch ($position) {
-                case 'before':
-                    $target = Department::findOrFail($targetId);
-                    $department->beforeNode($target)->save();
-                    break;
+            // 使用 Service 执行移动操作
+            app(DepartmentMoveService::class)->move(
+                $department,
+                $request->input('position'),
+                $request->input('target_id'),
+                $request->input('parent_id')
+            );
 
-                case 'after':
-                    $target = Department::findOrFail($targetId);
-                    $department->afterNode($target)->save();
-                    break;
-
-                case 'inside':
-                    $parentId = $request->input('parent_id');
-                    if ($parentId) {
-                        $parent = Department::findOrFail($parentId);
-                        $department->appendToNode($parent)->save();
-                    } else {
-                        $department->saveAsRoot();
-                    }
-                    break;
-            }
-
+            // 刷新数据并加载关系
             $department->fresh()->load('manager');
             $payload = DepartmentResource::make($department)->toArray($request);
 
             return $this->success($payload, '部门移动成功');
-        } catch (\Exception $e) {
-            return $this->error('部门移动失败：' . $e->getMessage(), 400, [], 400);
+        } catch (DepartmentMoveException $e) {
+            return $this->error($e->getMessage(), $e->getCode());
         }
     }
 }

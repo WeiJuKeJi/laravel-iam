@@ -39,7 +39,6 @@ class MenuSeeder extends Seeder
     {
         foreach ($nodes as $index => $node) {
             $meta = $node['meta'] ?? [];
-            $guard = $node['guard'] ?? null;
 
             $menu = Menu::updateOrCreate(
                 ['name' => $node['name']],
@@ -51,7 +50,6 @@ class MenuSeeder extends Seeder
                     'sort_order' => $node['sort_order'] ?? $index,
                     'is_enabled' => $node['is_enabled'] ?? true,
                     'meta' => $meta,
-                    'guard' => $guard,
                 ]
             );
 

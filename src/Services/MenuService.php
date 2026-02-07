@@ -104,7 +104,7 @@ class MenuService
             $children = $this->filterTree($menu->children, $roles);
             $menu->setRelation('children', $children);
 
-            $visible = $menu->isVisibleFor($roles, []);
+            $visible = $menu->isVisibleFor($roles);
 
             if (! $visible && $children->isEmpty()) {
                 return null;

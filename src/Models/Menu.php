@@ -95,7 +95,10 @@ class Menu extends Model
         $grouped = $menus->groupBy('parent_id');
 
         $build = function ($parentId) use (&$build, $grouped) {
-            return ($grouped[$parentId] ?? collect())->map(function (Menu $menu) use (&$build) {
+            // 使用 Eloquent Collection 作为默认值
+            $items = $grouped[$parentId] ?? new Collection();
+
+            return $items->map(function (Menu $menu) use (&$build) {
                 $menu->setRelation('children', $build($menu->getKey()));
 
                 return $menu;
@@ -143,7 +146,7 @@ class Menu extends Model
     /**
      * 根据角色过滤菜单。
      */
-    public function isVisibleFor(array $roles, array $permissions): bool
+    public function isVisibleFor(array $roles): bool
     {
         if (! $this->is_enabled) {
             return false;

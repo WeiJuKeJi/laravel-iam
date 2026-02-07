@@ -53,16 +53,13 @@ class Role extends BaseRole
      */
     public function users(): BelongsToMany
     {
-        $guardName = $this->guard_name ?? config('auth.defaults.guard');
-        $model = $guardName ? getModelForGuard($guardName) : null;
+        $model = $this->resolveUserModel();
 
         if (! $model) {
-            $fallbackGuard = config('auth.defaults.guard');
-            $model = $fallbackGuard ? getModelForGuard($fallbackGuard) : null;
-        }
-
-        if (! $model) {
-            $model = config('auth.providers.users.model');
+            throw new \LogicException(
+                'Unable to resolve user model for role. ' .
+                'Please check your auth.php configuration or set iam.models.user in config/iam.php'
+            );
         }
 
         return $this->morphedByMany(
@@ -72,5 +69,31 @@ class Role extends BaseRole
             app(PermissionRegistrar::class)->pivotRole,
             config('permission.column_names.model_morph_key')
         );
+    }
+
+    /**
+     * 解析用户模型类
+     */
+    protected function resolveUserModel(): ?string
+    {
+        // 1. 尝试从当前角色的 guard 获取模型
+        if ($this->guard_name && $model = getModelForGuard($this->guard_name)) {
+            return $model;
+        }
+
+        // 2. 尝试从默认 guard 获取模型
+        if ($defaultGuard = config('auth.defaults.guard')) {
+            if ($model = getModelForGuard($defaultGuard)) {
+                return $model;
+            }
+        }
+
+        // 3. 尝试从 IAM 配置获取用户模型
+        if ($model = config('iam.models.user')) {
+            return $model;
+        }
+
+        // 4. 最后尝试从 auth 配置获取
+        return config('auth.providers.users.model');
     }
 }

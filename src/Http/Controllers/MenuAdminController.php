@@ -6,6 +6,7 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use WeiJuKeJi\LaravelIam\Exceptions\MenuException;
 use WeiJuKeJi\LaravelIam\Http\Requests\Menu\MenuStoreRequest;
 use WeiJuKeJi\LaravelIam\Http\Requests\Menu\MenuUpdateRequest;
 use WeiJuKeJi\LaravelIam\Http\Resources\MenuResource;
@@ -24,8 +25,14 @@ class MenuAdminController extends Controller
         $params = $request->only(['parent_id', 'name', 'path', 'is_enabled', 'per_page', 'page']);
         $perPage = $this->resolvePerPage($params);
 
-        $records = Menu::filter($params)
-            ->with(['roles:id,name'])
+        $query = Menu::filter($params);
+
+        // 按需加载关系
+        if ($request->boolean('with_roles')) {
+            $query->with('roles:id,name');
+        }
+
+        $records = $query
             ->orderBy('sort_order')
             ->orderBy('id')
             ->paginate($perPage);
@@ -37,9 +44,14 @@ class MenuAdminController extends Controller
     {
         $params = $request->only(['parent_id', 'name', 'path', 'is_enabled']);
 
-        $menus = Menu::filter($params)
-            ->with(['roles:id,name'])
-            ->get();
+        $query = Menu::filter($params);
+
+        // 按需加载关系
+        if ($request->boolean('with_roles')) {
+            $query->with('roles:id,name');
+        }
+
+        $menus = $query->get();
 
         $tree = Menu::buildTree($menus);
 
@@ -58,14 +70,23 @@ class MenuAdminController extends Controller
         $roles = Arr::pull($data, 'role_ids', []);
 
         // 缓存清除由 Menu 模型的 saved 事件自动处理
-        $menu = $this->db->transaction(function () use ($data, $roles) {
+        $menu = $this->db->transaction(function () use ($data, $roles, $request) {
             $menu = Menu::create($data);
 
             if (! empty($roles)) {
                 $menu->roles()->sync($roles);
             }
 
-            return $menu->fresh(['roles:id,name', 'children']);
+            // 按需加载关系
+            $relations = [];
+            if ($request->boolean('with_roles', true)) {
+                $relations[] = 'roles:id,name';
+            }
+            if ($request->boolean('with_children')) {
+                $relations[] = 'children';
+            }
+
+            return ! empty($relations) ? $menu->fresh($relations) : $menu->fresh();
         });
 
         $payload = MenuResource::make($menu)->toArray($request);
@@ -73,9 +94,21 @@ class MenuAdminController extends Controller
         return $this->success($payload, '菜单创建成功');
     }
 
-    public function show(Menu $menu): JsonResponse
+    public function show(Request $request, Menu $menu): JsonResponse
     {
-        $menu->load(['roles:id,name', 'children']);
+        $relations = [];
+
+        // 按需加载关系
+        if ($request->boolean('with_roles', true)) {
+            $relations[] = 'roles:id,name';
+        }
+        if ($request->boolean('with_children')) {
+            $relations[] = 'children';
+        }
+
+        if (! empty($relations)) {
+            $menu->load($relations);
+        }
 
         return $this->respondWithResource($menu, MenuResource::class);
     }
@@ -87,13 +120,22 @@ class MenuAdminController extends Controller
         $roles = Arr::pull($data, 'role_ids', []);
 
         // 缓存清除由 Menu 模型的 saved 事件自动处理
-        $menu = $this->db->transaction(function () use ($menu, $data, $roles) {
+        $menu = $this->db->transaction(function () use ($menu, $data, $roles, $request) {
             $menu->fill($data);
             $menu->save();
 
             $menu->roles()->sync($roles);
 
-            return $menu->fresh(['roles:id,name', 'children']);
+            // 按需加载关系
+            $relations = [];
+            if ($request->boolean('with_roles', true)) {
+                $relations[] = 'roles:id,name';
+            }
+            if ($request->boolean('with_children')) {
+                $relations[] = 'children';
+            }
+
+            return ! empty($relations) ? $menu->fresh($relations) : $menu->fresh();
         });
 
         $payload = MenuResource::make($menu)->toArray($request);
@@ -103,13 +145,17 @@ class MenuAdminController extends Controller
 
     public function destroy(Menu $menu): JsonResponse
     {
-        if ($menu->children()->exists()) {
-            return $this->error('请先删除子菜单', 422);
+        try {
+            if ($menu->children()->exists()) {
+                throw MenuException::hasChildren();
+            }
+
+            // 缓存清除由 Menu 模型的 deleted 事件自动处理
+            $menu->delete();
+
+            return $this->success(null, '菜单已删除');
+        } catch (MenuException $e) {
+            return $this->error($e->getMessage(), $e->getCode());
         }
-
-        // 缓存清除由 Menu 模型的 deleted 事件自动处理
-        $menu->delete();
-
-        return $this->success(null, '菜单已删除');
     }
 }
