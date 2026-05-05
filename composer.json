@@ -14,12 +14,12 @@
         "php": "^8.2",
         "illuminate/support": "^11.0 || ^12.0 || ^13.0",
         "spatie/laravel-permission": "^6.0 || ^7.0",
-        "kalnoy/nestedset": "^7.0",
-        "tucker-eric/eloquentfilter": "^3.5"
+        "tucker-eric/eloquentfilter": "^3.5",
+        "kalnoy/nestedset": "^6.0 || ^7.0"
     },
     "require-dev": {
-        "orchestra/testbench": "^9.0",
-        "phpunit/phpunit": "^11.0"
+        "orchestra/testbench": "^9.0|^10.0|^11.0",
+        "phpunit/phpunit": "^11.0|^12.0|^13.0"
     },
     "autoload": {
         "psr-4": {
