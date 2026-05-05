@@ -12,9 +12,9 @@
     ],
     "require": {
         "php": "^8.2",
-        "illuminate/support": "^11.0 || ^12.0",
-        "spatie/laravel-permission": "^6.0",
-        "kalnoy/nestedset": "^6.0",
+        "illuminate/support": "^11.0 || ^12.0 || ^13.0",
+        "spatie/laravel-permission": "^6.0 || ^7.0",
+        "kalnoy/nestedset": "^7.0",
         "tucker-eric/eloquentfilter": "^3.5"
     },
     "require-dev": {

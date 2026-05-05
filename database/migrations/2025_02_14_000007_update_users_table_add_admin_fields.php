@@ -64,8 +64,10 @@ return new class extends Migration
         $driver = DB::getDriverName();
         if ($driver === 'pgsql') {
             DB::statement("UPDATE users SET username = SPLIT_PART(email, '@', 1) WHERE username IS NULL");
+        } elseif ($driver === 'sqlite') {
+            DB::statement("UPDATE users SET username = CASE WHEN INSTR(email, '@') > 0 THEN SUBSTR(email, 1, INSTR(email, '@') - 1) ELSE email END WHERE username IS NULL");
         } else {
-            // MySQL / MariaDB / SQLite
+            // MySQL / MariaDB
             DB::statement("UPDATE users SET username = SUBSTRING_INDEX(email, '@', 1) WHERE username IS NULL");
         }
 
